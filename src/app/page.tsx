@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import FaceDetector from "@/components/FaceDetector";
 import Link from "next/link";
 import { Settings, BarChart3, Camera, Users } from "lucide-react";
-import { AIProviderConfig, AI_CONFIG_STORAGE_KEY, isAIConfigured } from "@/lib/ai-config";
+import { AIProviderConfig, AI_CONFIG_STORAGE_KEY, isAIConfigured, getEffectiveConfig } from "@/lib/ai-config";
 
 type DetectionMode = "snapshot" | "contador";
 
@@ -253,7 +253,7 @@ export default function Home() {
 
             <FaceDetector
               eventName={eventName}
-              aiConfig={aiConfig}
+              aiConfig={aiConfig ? getEffectiveConfig(aiConfig) : null}
               mode={mode}
               onCapture={() => setCaptureCount((c) => c + 1)}
               onPersonCount={handlePersonCount}
