@@ -1,14 +1,14 @@
 {
   "task_id": "task-detection-ui-improvements",
   "task_description": "Improve the detection UI with mode indicator banner, 10-second snapshot freeze, per-person tracking (per1/per2/per3) with emotion history in contador mode, better color contrast for dark mode, and more intuitive detection interface",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001"],
   "blocked_reason": null,
   "verification": {
     "build": "pass",
-    "tests": "pass",
+    "tests": "skipped",
     "test_quality": "skipped",
     "docker_build": "skipped",
-    "summary": "npm run build passes cleanly. No test suite exists in this project. No Dockerfile present."
+    "summary": "npm run build passes cleanly. No test suite exists in this project. No Dockerfile present. Semantic review APPROVED on v2 pass."
   }
 }
