@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
         .select()
         .from(emotionCaptures)
         .where(whereClause)
-        .orderBy(sql`${emotionCaptures.capturedAt} DESC`);
+        .orderBy(sql`${emotionCaptures.capturedAt} DESC`)
+        .limit(10000);
 
       const csvHeader = "Evento,Fecha,Hora,Personas,Emocion Dominante,Mensaje";
       const csvRows = allCaptures.map((capture) => {

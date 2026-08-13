@@ -162,13 +162,10 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     const now = Date.now();
 
     if (faces.length === 0) {
-      // If no faces for more than FACE_DISAPPEAR_RESET_MS, reset tracking
+      // If no faces for more than FACE_DISAPPEAR_RESET_MS, reset tracking array
+      // but keep cumulative unique count and snapshot history for the session
       if (now - lastFacesSeenTimeRef.current > FACE_DISAPPEAR_RESET_MS) {
         trackedFacesRef.current = [];
-        uniquePersonCountRef.current = 0;
-        nextFaceIdRef.current = 1;
-        snapshotShownForFacesRef.current = new Set();
-        onPersonCount?.(0);
       }
       return [];
     }
@@ -265,6 +262,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     if (faces.length > 1) {
       const confidentFaces = faces.filter((f) => f.confidence > 0.3);
       if (confidentFaces.length < faces.length * 0.5) return;
+    } else if (faces.length === 1) {
+      // Single face must also meet minimum confidence threshold
+      if (faces[0].confidence <= 0.3) return;
     }
 
     const image = captureVideoSnapshot();
@@ -359,12 +359,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         return;
       }
 
-      // Pause detection during snapshot display
-      if (isSnapshotActive) {
-        animationId = requestAnimationFrame(detect);
-        return;
-      }
-
       isDetecting = true;
       const video = videoRef.current;
 
@@ -384,8 +378,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-      // Clear canvas
-      const ctx = canvas.getContext("2d");
+      // Only draw on canvas when snapshot is not active
+      const ctx = !isSnapshotActive ? canvas.getContext("2d") : null;
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
@@ -431,7 +425,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const faceIds = updateTracking(faces);
 
         // Mode-specific behavior
-        if (mode === "snapshot") {
+        if (mode === "snapshot" && !isSnapshotActive) {
           // Trigger snapshot if conditions are met
           triggerSnapshot(faces, dominant, faceIds);
         }

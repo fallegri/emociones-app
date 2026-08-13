@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import FaceDetector from "@/components/FaceDetector";
 import Link from "next/link";
 import { Settings, BarChart3, Camera, Users } from "lucide-react";
@@ -43,6 +43,10 @@ export default function Home() {
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
+  }, []);
+
+  const handlePersonCount = useCallback((count: number) => {
+    setPersonCount(count);
   }, []);
 
   const handleStart = () => {
@@ -237,7 +241,7 @@ export default function Home() {
               aiConfig={aiConfig}
               mode={mode}
               onCapture={() => setCaptureCount((c) => c + 1)}
-              onPersonCount={(count) => setPersonCount(count)}
+              onPersonCount={handlePersonCount}
             />
           </div>
         )}
