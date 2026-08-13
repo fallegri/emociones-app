@@ -230,6 +230,50 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Mode indicator banner */}
+            <div
+              className={`rounded-xl p-3 sm:p-4 border-2 flex items-center gap-3 animate-mode-pulse ${
+                mode === "contador"
+                  ? "bg-indigo-950/60 border-indigo-400/50"
+                  : "bg-emerald-950/60 border-emerald-400/50"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${
+                  mode === "contador" ? "bg-indigo-500/20" : "bg-emerald-500/20"
+                }`}
+              >
+                {mode === "contador" ? (
+                  <Users className="text-indigo-300" size={22} />
+                ) : (
+                  <Camera className="text-emerald-300" size={22} />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full animate-pulse ${
+                      mode === "contador" ? "bg-indigo-400" : "bg-emerald-400"
+                    }`}
+                  />
+                  <p
+                    className={`text-sm sm:text-base font-bold tracking-wide ${
+                      mode === "contador" ? "text-indigo-200" : "text-emerald-200"
+                    }`}
+                  >
+                    {mode === "contador"
+                      ? "MODO CONTADOR - Rastreo por persona"
+                      : "MODO SNAPSHOT - Captura + Poema"}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {mode === "contador"
+                    ? "Seguimiento individual de emociones por persona"
+                    : "Captura automatica con poema al detectar rostros"}
+                </p>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <h2 className="text-base sm:text-lg font-bold text-white truncate">

@@ -6,7 +6,7 @@ import { desc } from "drizzle-orm";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { eventName, personCount, emotions, dominantEmotion, message } = body;
+    const { eventName, personCount, emotions, dominantEmotion, message, personEmotions } = body;
 
     if (!eventName || !personCount || !emotions || !dominantEmotion || !message) {
       return NextResponse.json(
@@ -18,12 +18,17 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const hour = now.getHours();
 
+    // Build enriched emotions data when personEmotions is available
+    const emotionsData = personEmotions
+      ? { detectedEmotions: emotions, personEmotions }
+      : emotions;
+
     const capture = await db
       .insert(emotionCaptures)
       .values({
         eventName,
         personCount,
-        emotions,
+        emotions: emotionsData,
         dominantEmotion,
         message,
         hour,

@@ -29,12 +29,23 @@ interface Props {
   onPersonCount?: (count: number) => void;
 }
 
+export interface PersonEmotionEntry {
+  emotion: string;
+  timestamp: string;
+}
+
+export interface PersonEmotionData {
+  personId: string;
+  emotions: PersonEmotionEntry[];
+}
+
 export interface CaptureData {
   eventName: string;
   personCount: number;
   emotions: EmotionType[];
   dominantEmotion: EmotionType;
   message: string;
+  personEmotions?: PersonEmotionData[];
 }
 
 export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onPersonCount }: Props) {
@@ -67,10 +78,17 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const lastFacesSeenTimeRef = useRef<number>(Date.now());
   const snapshotShownForFacesRef = useRef<Set<number>>(new Set());
 
+  // Per-person emotion history (for contador mode)
+  const personEmotionHistoryRef = useRef<Map<number, PersonEmotionEntry[]>>(new Map());
+  const personLastEmotionRef = useRef<Map<number, string>>(new Map());
+
+  // Tracked face IDs for current detections (to show in UI)
+  const [currentFaceIds, setCurrentFaceIds] = useState<number[]>([]);
+
   const CAPTURE_INTERVAL = 5000;
   const AI_THROTTLE_INTERVAL = 5000;
   const FACE_DISAPPEAR_RESET_MS = 3000;
-  const SNAPSHOT_DISPLAY_MS = 5000;
+  const SNAPSHOT_DISPLAY_MS = 10000;
 
   // Reset snapshot tracking when switching to snapshot mode so current faces can trigger it
   const prevModeRef = useRef<string>(mode);
@@ -261,6 +279,23 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     return tempCanvas.toDataURL("image/jpeg", 0.85);
   }, []);
 
+  // Save capture to database
+  const saveCapture = useCallback(
+    async (captureData: CaptureData) => {
+      try {
+        await fetch("/api/captures", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(captureData),
+        });
+        onCapture?.(captureData);
+      } catch (err) {
+        console.error("Error saving capture:", err);
+      }
+    },
+    [onCapture]
+  );
+
   // Handle snapshot mode trigger
   const triggerSnapshot = useCallback((faces: DetectedFace[], dominant: EmotionType, faceIds: number[]) => {
     // Check if we already showed snapshot for these faces
@@ -288,6 +323,17 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     // Mark these faces as snapshot-shown
     faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
 
+    // Save snapshot capture to database
+    const emotions = faces.map((f) => f.emotion);
+    const captureData: CaptureData = {
+      eventName,
+      personCount: faces.length,
+      emotions,
+      dominantEmotion: dominant,
+      message: poem,
+    };
+    saveCapture(captureData);
+
     // Auto-dismiss after SNAPSHOT_DISPLAY_MS
     setTimeout(() => {
       setIsSnapshotActive(false);
@@ -295,7 +341,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       setSnapshotPoem("");
       setSnapshotEmotion(null);
     }, SNAPSHOT_DISPLAY_MS);
-  }, [captureVideoSnapshot]);
+  }, [captureVideoSnapshot, eventName, saveCapture]);
 
   // Generate AI message
   const generateAIMessage = useCallback(
@@ -336,23 +382,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       }
     },
     [eventName, aiConfig]
-  );
-
-  // Save capture to database
-  const saveCapture = useCallback(
-    async (captureData: CaptureData) => {
-      try {
-        await fetch("/api/captures", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(captureData),
-        });
-        onCapture?.(captureData);
-      } catch (err) {
-        console.error("Error saving capture:", err);
-      }
-    },
-    [onCapture]
   );
 
   // Face detection loop
@@ -432,6 +461,27 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
         // Update face tracking
         const faceIds = updateTracking(faces);
+        setCurrentFaceIds(faceIds);
+
+        // Per-person emotion tracking (contador mode)
+        if (mode === "contador" && faceIds.length > 0) {
+          faceIds.forEach((id, idx) => {
+            const currentEmotion = faces[idx]?.emotion;
+            if (!currentEmotion) return;
+
+            const lastEmotion = personLastEmotionRef.current.get(id);
+            if (lastEmotion !== currentEmotion) {
+              personLastEmotionRef.current.set(id, currentEmotion);
+              const history = personEmotionHistoryRef.current.get(id) || [];
+              history.push({
+                emotion: currentEmotion,
+                timestamp: new Date().toISOString(),
+              });
+              personEmotionHistoryRef.current.set(id, history);
+              console.log(`per${id}: ${lastEmotion || "inicio"} -> ${currentEmotion}`);
+            }
+          });
+        }
 
         // Mode-specific behavior
         if (mode === "snapshot" && !isSnapshotActive) {
@@ -455,12 +505,25 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const now = Date.now();
         if (now - lastCaptureTime.current >= CAPTURE_INTERVAL) {
           lastCaptureTime.current = now;
+
+          // Build personEmotions data from history
+          const personEmotions: PersonEmotionData[] = [];
+          if (mode === "contador") {
+            personEmotionHistoryRef.current.forEach((emotions, personId) => {
+              personEmotions.push({
+                personId: `per${personId}`,
+                emotions,
+              });
+            });
+          }
+
           const captureData: CaptureData = {
             eventName,
             personCount: faces.length,
             emotions,
             dominantEmotion: dominant,
             message: currentMessageRef.current,
+            ...(personEmotions.length > 0 ? { personEmotions } : {}),
           };
           saveCapture(captureData);
         }
@@ -623,20 +686,28 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
             Personas detectadas: {detectedFaces.length}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-            {detectedFaces.map((face, i) => (
-              <div
-                key={i}
-                className="bg-gray-900/60 rounded-lg p-2.5 sm:p-3 text-center border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
-              >
-                <p className="text-xl sm:text-2xl">{emotionEmojis[face.emotion]}</p>
-                <p className="text-white text-[10px] sm:text-xs mt-1 font-medium">
-                  Persona {i + 1}
-                </p>
-                <p className="text-gray-400 text-[10px] sm:text-xs">
-                  {emotionLabels[face.emotion]} {Math.round(face.confidence * 100)}%
-                </p>
-              </div>
-            ))}
+            {detectedFaces.map((face, i) => {
+              const faceId = currentFaceIds[i];
+              const emotionColor = getEmotionAccentColor(face.emotion);
+              return (
+                <div
+                  key={faceId || i}
+                  className="bg-gray-900/80 rounded-lg p-2.5 sm:p-3 text-center border-l-4 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
+                  style={{ borderLeftColor: emotionColor }}
+                >
+                  <p className="text-xl sm:text-2xl">{emotionEmojis[face.emotion]}</p>
+                  <p className="text-white text-[10px] sm:text-xs mt-1 font-bold tracking-wide">
+                    {faceId ? `per${faceId}` : `Persona ${i + 1}`}
+                  </p>
+                  <p className="text-white/80 text-[10px] sm:text-xs font-medium">
+                    {emotionLabels[face.emotion]}
+                  </p>
+                  <p className="text-emerald-300 text-[10px] font-semibold">
+                    {Math.round(face.confidence * 100)}%
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -646,13 +717,26 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
 function getEmotionBg(emotion: EmotionType): string {
   const gradients: Record<EmotionType, string> = {
-    happy: "#f59e0b, #eab308",
-    sad: "#3b82f6, #6366f1",
-    angry: "#ef4444, #dc2626",
-    surprised: "#f97316, #fb923c",
-    disgusted: "#22c55e, #16a34a",
-    fearful: "#a855f7, #7c3aed",
-    neutral: "#6b7280, #4b5563",
+    happy: "#fbbf24, #f59e0b",
+    sad: "#60a5fa, #818cf8",
+    angry: "#f87171, #ef4444",
+    surprised: "#fb923c, #f97316",
+    disgusted: "#4ade80, #22c55e",
+    fearful: "#c084fc, #a855f7",
+    neutral: "#9ca3af, #6b7280",
   };
   return gradients[emotion];
+}
+
+function getEmotionAccentColor(emotion: EmotionType): string {
+  const colors: Record<EmotionType, string> = {
+    happy: "#fbbf24",
+    sad: "#60a5fa",
+    angry: "#f87171",
+    surprised: "#fb923c",
+    disgusted: "#4ade80",
+    fearful: "#c084fc",
+    neutral: "#9ca3af",
+  };
+  return colors[emotion];
 }
