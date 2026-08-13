@@ -1,0 +1,27 @@
+{
+  "project_type": "Next.js 16 real-time emotion detection app with App Router",
+  "language": "TypeScript",
+  "build_system": "npm with Next.js 16.3.0, Tailwind CSS 4, PostCSS",
+  "test_framework": "None (no tests currently exist)",
+  "build_command": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+  "test_command": "N/A - no test suite configured",
+  "verification_instructions": "Run npm run build and confirm it succeeds with no TypeScript errors. Verify the app routes compile: / (main), /dashboard, /settings, plus all API routes.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Node.js v22 via nvm. Dependencies already installed in node_modules.",
+  "environment_constraints": "OPEN_INTERNET mode. Must prefix all npm/node commands with: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&. Next.js 16 - check node_modules/next/dist/docs/ for any API differences before writing code.",
+  "contribution_requirements": "AGENTS.md mandates reading node_modules/next/dist/docs/ for Next.js 16 breaking changes. The app uses client components ('use client' directive). App Router with route.ts for API endpoints.",
+  "key_patterns": "Client-side 'use client' components with useState/useEffect. face-api.js for detection. FaceDetector component receives mode prop ('snapshot'|'contador'), face tracking with TrackedFace interface (id, centerX, centerY, width, height, lastSeen). Captures saved to Neon PostgreSQL via drizzle-orm. getEmotionBg() function returns CSS gradient strings for emotion styling. Mode toggle at bottom of detection view in page.tsx. Dashboard reads from emotion_captures table with jsonb 'emotions' field.",
+  "relevant_files": [
+    "src/components/FaceDetector.tsx",
+    "src/app/page.tsx",
+    "src/app/globals.css",
+    "src/lib/emotions.ts",
+    "src/lib/schema.ts",
+    "src/lib/poems.ts",
+    "src/app/api/captures/route.ts",
+    "src/app/api/dashboard/route.ts",
+    "src/app/dashboard/page.tsx",
+    "scripts/migrate.ts"
+  ],
+  "directory_structure": "src/app/ (pages + API routes), src/components/ (FaceDetector.tsx), src/lib/ (utilities: emotions.ts, poems.ts, ai-config.ts, db.ts, schema.ts), public/models/ (face-api.js models), scripts/ (migrate.ts, download-models.sh)"
+}

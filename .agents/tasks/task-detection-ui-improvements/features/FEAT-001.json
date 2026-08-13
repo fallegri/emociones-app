@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add mode indicator banner, improve color contrast, enhance detection UI, implement snapshot freeze (10s), and add per-person tracking in contador mode",
+  "status": "completed",
+  "steps": [
+    "1. In src/components/FaceDetector.tsx, change SNAPSHOT_DISPLAY_MS from 5000 to 10000 to freeze the image for 10 seconds in snapshot mode.",
+    "2. In src/app/page.tsx, add a MODE INDICATOR BANNER between the person-count card and the event name section. For 'contador' mode: use a vivid indigo/blue banner with Users icon showing 'MODO CONTADOR - Rastreo por persona'. For 'snapshot' mode: use a vivid emerald/green banner with Camera icon showing 'MODO SNAPSHOT - Captura + Poema'. The banner should be prominent, with a pill/badge style, distinct background color, and slightly pulsing dot indicator.",
+    "3. In src/components/FaceDetector.tsx, update the getEmotionBg() function to use brighter, more vivid gradient colors that contrast well against dark backgrounds. Suggested replacements: happy='#fbbf24, #f59e0b' (brighter amber), sad='#60a5fa, #818cf8' (brighter blue/indigo), angry='#f87171, #ef4444' (brighter red), surprised='#fb923c, #f97316' (brighter orange), disgusted='#4ade80, #22c55e' (brighter green), fearful='#c084fc, #a855f7' (brighter purple), neutral='#9ca3af, #6b7280' (brighter gray).",
+    "4. In src/components/FaceDetector.tsx, update the detection panel (the grid showing 'Persona 1', 'Persona 2' etc.) to use tracked face IDs instead of sequential indices. Change label from 'Persona {i+1}' to 'per{trackedId}' format. Pass the tracked IDs through - the detection loop already returns faceIds from updateTracking(). Store faceIds in component state alongside detectedFaces so the panel can map face[i] to faceId[i].",
+    "5. In src/components/FaceDetector.tsx, implement per-person emotion history tracking for CONTADOR mode. Add a ref (personEmotionHistoryRef) that maps person ID to an array of {emotion, timestamp} entries. When a tracked person's emotion changes, log it (e.g., per1 triste -> per1 feliz). Include this per-person emotion history in the capture data sent to the API.",
+    "6. Update the CaptureData interface in src/components/FaceDetector.tsx and the POST handler in src/app/api/captures/route.ts to accept an optional 'personEmotions' field (array of {personId: string, emotions: {emotion: string, timestamp: string}[]}). The existing 'emotions' jsonb column in the DB already accepts any JSON, so this richer data structure will be stored there when in contador mode.",
+    "7. In the detection panel cards (src/components/FaceDetector.tsx), improve visual contrast: use brighter text colors (text-white instead of text-gray-400 for emotion labels), add a subtle colored left border or background tint based on the person's current emotion, and increase the card background opacity for better readability.",
+    "8. In the snapshot overlay (src/components/FaceDetector.tsx), ensure the snapshot also saves the capture data to the DB when it triggers. Add a call to saveCapture() inside triggerSnapshot() with the snapshot-specific data (including the dominant emotion, poem text, and face count).",
+    "9. In src/app/globals.css, add a new animation class 'animate-mode-pulse' with a gentle pulsing glow effect for the mode indicator banner."
+  ],
+  "acceptance_criteria": [
+    "npm run build passes with no TypeScript errors",
+    "Mode indicator banner is visible above the detection area showing current mode with distinct color (indigo for contador, emerald for snapshot)",
+    "Snapshot mode freezes the display for 10 seconds (SNAPSHOT_DISPLAY_MS = 10000)",
+    "Detection panel shows 'per{id}' labels based on tracked face IDs instead of sequential 'Persona 1' labels",
+    "Contador mode tracks per-person emotion changes and includes personEmotions data in captures sent to the API",
+    "getEmotionBg() uses brighter gradient colors that are visible on dark backgrounds",
+    "Detection panel cards have improved contrast with brighter text and colored accent per emotion",
+    "Snapshot mode saves capture data to the DB when triggered",
+    "POST /api/captures accepts optional personEmotions field without breaking existing captures"
+  ],
+  "verification": [
+    "Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build"
+  ],
+  "blocked_reason": null,
+  "findings": "Build passes cleanly. Review fixes applied: (1) personEmotionHistoryRef is now flushed after each auto-save cycle to prevent unbounded growth. (2) snapshotImage (base64 JPEG) is now included in CaptureData and saved to a dedicated snapshot_image text column. (3) emotions column always stores the flat array; personEmotions stored in a separate person_emotions jsonb column for consistent schema. (4) Face ID index coupling documented with a comment. (5) personEmotions validated in the API route before DB insert. Migration script updated with ADD COLUMN IF NOT EXISTS for both new columns."
+}

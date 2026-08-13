@@ -19,8 +19,21 @@ async function migrate() {
       emotions JSONB NOT NULL,
       dominant_emotion VARCHAR(50) NOT NULL,
       message TEXT NOT NULL,
-      hour INTEGER NOT NULL
+      hour INTEGER NOT NULL,
+      snapshot_image TEXT,
+      person_emotions JSONB
     )
+  `;
+
+  // Add new columns if they don't exist (for existing tables)
+  await sql`
+    ALTER TABLE emotion_captures
+    ADD COLUMN IF NOT EXISTS snapshot_image TEXT
+  `;
+
+  await sql`
+    ALTER TABLE emotion_captures
+    ADD COLUMN IF NOT EXISTS person_emotions JSONB
   `;
 
   // Create indexes for better query performance

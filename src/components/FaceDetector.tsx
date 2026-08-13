@@ -46,6 +46,7 @@ export interface CaptureData {
   dominantEmotion: EmotionType;
   message: string;
   personEmotions?: PersonEmotionData[];
+  snapshotImage?: string;
 }
 
 export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onPersonCount }: Props) {
@@ -323,7 +324,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     // Mark these faces as snapshot-shown
     faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
 
-    // Save snapshot capture to database
+    // Save snapshot capture to database (including the image)
     const emotions = faces.map((f) => f.emotion);
     const captureData: CaptureData = {
       eventName,
@@ -331,6 +332,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       emotions,
       dominantEmotion: dominant,
       message: poem,
+      snapshotImage: image,
     };
     saveCapture(captureData);
 
@@ -464,6 +466,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         setCurrentFaceIds(faceIds);
 
         // Per-person emotion tracking (contador mode)
+        // NOTE: faceIds[idx] corresponds to faces[idx] because updateTracking()
+        // returns IDs in the same order as the input faces array. This coupling is
+        // intentional and deterministic - do not reorder faces before calling updateTracking().
         if (mode === "contador" && faceIds.length > 0) {
           faceIds.forEach((id, idx) => {
             const currentEmotion = faces[idx]?.emotion;
@@ -515,6 +520,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
                 emotions,
               });
             });
+            // Flush history after building the payload to prevent unbounded growth.
+            // Only the changes since last save cycle are persisted each time.
+            personEmotionHistoryRef.current.clear();
           }
 
           const captureData: CaptureData = {
