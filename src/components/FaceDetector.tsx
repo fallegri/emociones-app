@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as faceapi from "face-api.js";
 import { EmotionType, emotionLabels, emotionEmojis, getRandomMessage, getGroupDominantEmotion } from "@/lib/emotions";
+import { AIProviderConfig } from "@/lib/ai-config";
 
 interface DetectedFace {
   emotion: EmotionType;
@@ -12,6 +13,7 @@ interface DetectedFace {
 
 interface Props {
   eventName: string;
+  aiConfig?: AIProviderConfig | null;
   onCapture?: (data: CaptureData) => void;
 }
 
@@ -23,7 +25,7 @@ export interface CaptureData {
   message: string;
 }
 
-export default function FaceDetector({ eventName, onCapture }: Props) {
+export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +35,10 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastCaptureTime = useRef<number>(0);
+  const lastAICallTime = useRef<number>(0);
+  const aiMessagePending = useRef<boolean>(false);
   const CAPTURE_INTERVAL = 5000; // Save to DB every 5 seconds if faces detected
+  const AI_THROTTLE_INTERVAL = 5000; // Only call AI every 5 seconds
 
   // Load face-api models
   useEffect(() => {
@@ -48,7 +53,7 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
         setIsLoading(false);
       } catch (err) {
         console.error("Error loading models:", err);
-        setError("Error cargando modelos de detección facial. Recarga la página.");
+        setError("Error cargando modelos de deteccion facial. Recarga la pagina.");
         setIsLoading(false);
       }
     };
@@ -69,7 +74,7 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
-        setError("No se pudo acceder a la cámara. Verifica los permisos.");
+        setError("No se pudo acceder a la camara. Verifica los permisos.");
       }
     };
     startCamera();
@@ -81,6 +86,45 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
       }
     };
   }, [isModelLoaded]);
+
+  // Generate AI message
+  const generateAIMessage = useCallback(
+    async (emotions: EmotionType[], personCount: number, dominant: EmotionType) => {
+      if (aiMessagePending.current) return;
+
+      const now = Date.now();
+      if (now - lastAICallTime.current < AI_THROTTLE_INTERVAL) return;
+
+      lastAICallTime.current = now;
+      aiMessagePending.current = true;
+
+      try {
+        const response = await fetch("/api/ai/generate-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            emotions,
+            personCount,
+            dominantEmotion: dominant,
+            eventName,
+            aiConfig,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.message) {
+          setCurrentMessage(data.message);
+        }
+      } catch {
+        // Fallback to static message on network error
+        const isGroup = personCount > 1;
+        setCurrentMessage(getRandomMessage(dominant, isGroup));
+      } finally {
+        aiMessagePending.current = false;
+      }
+    },
+    [eventName, aiConfig]
+  );
 
   // Save capture to database
   const saveCapture = useCallback(
@@ -175,9 +219,14 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
         const dominant = getGroupDominantEmotion(emotions);
         setDominantEmotion(dominant);
 
-        const isGroup = faces.length > 1;
-        const message = getRandomMessage(dominant, isGroup);
-        setCurrentMessage(message);
+        // Use AI for message generation if configured, otherwise static
+        if (aiConfig && aiConfig.baseUrl && aiConfig.apiKey && aiConfig.modelName) {
+          generateAIMessage(emotions, faces.length, dominant);
+        } else {
+          const isGroup = faces.length > 1;
+          const message = getRandomMessage(dominant, isGroup);
+          setCurrentMessage(message);
+        }
 
         // Auto-save to database at intervals
         const now = Date.now();
@@ -188,7 +237,7 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
             personCount: faces.length,
             emotions,
             dominantEmotion: dominant,
-            message,
+            message: currentMessage,
           };
           saveCapture(captureData);
         }
@@ -207,7 +256,7 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isModelLoaded, eventName, saveCapture]);
+  }, [isModelLoaded, eventName, saveCapture, aiConfig, generateAIMessage, currentMessage]);
 
   if (error) {
     return (
@@ -227,8 +276,8 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Video container */}
-      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl">
+      {/* Video container - max 2/3 of 1400px = 933px */}
+      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl max-w-[933px] mx-auto">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
             <div className="text-center">
@@ -275,7 +324,7 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
       {/* Emotion message */}
       {currentMessage && dominantEmotion && (
         <div
-          className="rounded-xl p-6 text-center shadow-lg transition-all duration-500 animate-fade-in"
+          className="rounded-xl p-6 text-center shadow-lg transition-all duration-500 animate-fade-in max-w-[933px] mx-auto"
           style={{
             background: `linear-gradient(135deg, ${getEmotionBg(dominantEmotion)})`
           }}
@@ -292,23 +341,28 @@ export default function FaceDetector({ eventName, onCapture }: Props) {
         </div>
       )}
 
-      {/* Individual emotions breakdown */}
-      {detectedFaces.length > 1 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {detectedFaces.map((face, i) => (
-            <div
-              key={i}
-              className="bg-gray-800 rounded-lg p-3 text-center border border-gray-700"
-            >
-              <p className="text-2xl">{emotionEmojis[face.emotion]}</p>
-              <p className="text-white text-xs mt-1">
-                Persona {i + 1}: {emotionLabels[face.emotion]}
-              </p>
-              <p className="text-gray-400 text-xs">
-                {Math.round(face.confidence * 100)}%
-              </p>
-            </div>
-          ))}
+      {/* Detection panel - ALWAYS shown when faces are detected */}
+      {detectedFaces.length > 0 && (
+        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 max-w-[933px] mx-auto">
+          <h3 className="text-white font-semibold mb-3 text-sm">
+            👥 Personas detectadas: {detectedFaces.length}
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {detectedFaces.map((face, i) => (
+              <div
+                key={i}
+                className="bg-gray-900 rounded-lg p-3 text-center border border-gray-700"
+              >
+                <p className="text-2xl">{emotionEmojis[face.emotion]}</p>
+                <p className="text-white text-xs mt-1">
+                  Persona {i + 1}: {emotionLabels[face.emotion]}
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {Math.round(face.confidence * 100)}%
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

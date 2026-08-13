@@ -1,13 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FaceDetector from "@/components/FaceDetector";
+import AISettingsModal from "@/components/AISettingsModal";
 import Link from "next/link";
+import { Settings } from "lucide-react";
+import { AIProviderConfig, AI_CONFIG_STORAGE_KEY } from "@/lib/ai-config";
 
 export default function Home() {
   const [eventName, setEventName] = useState("");
   const [isStarted, setIsStarted] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [aiConfig, setAiConfig] = useState<AIProviderConfig | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
+    if (stored) {
+      try {
+        setAiConfig(JSON.parse(stored));
+      } catch {
+        // ignore invalid stored data
+      }
+    }
+  }, []);
 
   const handleStart = () => {
     if (eventName.trim()) {
@@ -24,7 +40,7 @@ export default function Home() {
             <span className="text-3xl">🎭</span>
             <div>
               <h1 className="text-xl font-bold text-white">EmotionAI</h1>
-              <p className="text-xs text-gray-400">Detección de emociones en tiempo real</p>
+              <p className="text-xs text-gray-400">Deteccion de emociones en tiempo real</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -33,6 +49,13 @@ export default function Home() {
                 📸 {captureCount} capturas
               </span>
             )}
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition"
+              title="Configuracion de IA"
+            >
+              <Settings size={20} />
+            </button>
             <Link
               href="/dashboard"
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
@@ -54,7 +77,7 @@ export default function Home() {
                   Detector de Emociones
                 </h2>
                 <p className="text-gray-400">
-                  Ingresa el nombre del evento para comenzar la detección facial en tiempo real
+                  Ingresa el nombre del evento para comenzar la deteccion facial en tiempo real
                 </p>
               </div>
 
@@ -78,13 +101,13 @@ export default function Home() {
                   disabled={!eventName.trim()}
                   className="w-full py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  🚀 Iniciar Detección
+                  🚀 Iniciar Deteccion
                 </button>
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-700">
                 <p className="text-xs text-gray-500 text-center">
-                  Se necesita acceso a la cámara. Los datos se guardan automáticamente cada 5 segundos cuando se detectan rostros.
+                  Se necesita acceso a la camara. Los datos se guardan automaticamente cada 5 segundos cuando se detectan rostros.
                 </p>
               </div>
             </div>
@@ -98,7 +121,7 @@ export default function Home() {
                   📍 {eventName}
                 </h2>
                 <p className="text-sm text-gray-400">
-                  Detección en tiempo real activa
+                  Deteccion en tiempo real activa
                 </p>
               </div>
               <button
@@ -114,11 +137,19 @@ export default function Home() {
 
             <FaceDetector
               eventName={eventName}
+              aiConfig={aiConfig}
               onCapture={() => setCaptureCount((c) => c + 1)}
             />
           </div>
         )}
       </div>
+
+      {/* AI Settings Modal */}
+      <AISettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onConfigSaved={setAiConfig}
+      />
     </main>
   );
 }
