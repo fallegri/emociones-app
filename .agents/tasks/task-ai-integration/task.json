@@ -1,0 +1,14 @@
+{
+  "task_id": "task-ai-integration",
+  "task_description": "Add AI provider integration (OpenAI-compatible API format supporting OpenAI, NVIDIA NIM, Ollama, and any compatible provider) with user-facing settings modal, connection validation, AI-generated contextual messages, camera layout adjustments (max 2/3 screen width), and detected persons panel showing individual emotions.",
+  "status": "completed",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "skipped",
+    "docker_build": "skipped",
+    "summary": "npm run build passes successfully. No unit tests exist in this project. All new routes and components compile correctly. Semantic review v2 APPROVED after fixing stale closure, effect restart, prompt injection, and timeout issues."
+  }
+}

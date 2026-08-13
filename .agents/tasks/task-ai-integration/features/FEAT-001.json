@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add AI provider settings UI, API validation route, and AI-powered contextual message generation. Also adjust camera layout to max 2/3 width on 1400px screens, and show detected persons panel with individual emotions below the camera.",
+  "status": "completed",
+  "steps": [
+    "Install openai npm package: `npm install openai`",
+    "Create src/lib/ai-config.ts - Define TypeScript types for AI provider config (baseUrl, apiKey, modelName). Include a helper to create an OpenAI client instance from config. This should work with OpenAI, NVIDIA NIM (https://integrate.api.nvidia.com/v1), Ollama (http://localhost:11434/v1), or any OpenAI-compatible provider.",
+    "Create src/app/api/ai/validate/route.ts - POST endpoint that receives {baseUrl, apiKey, model} and makes a test chat completion call (a simple 'say hello' prompt) to validate the connection. Return success/failure with error details.",
+    "Create src/app/api/ai/generate-message/route.ts - POST endpoint that receives {emotions: EmotionType[], personCount: number, dominantEmotion: string, eventName: string} plus reads AI config from request headers or body. Calls the LLM to generate a contextual message in Spanish about the detected emotions. Falls back to the static random message if AI is not configured or fails.",
+    "Create src/components/AISettingsModal.tsx - A modal/dialog component with form fields: Provider Base URL (with placeholders showing OpenAI/NVIDIA/Ollama examples), API Key (password input), Model Name. Include a 'Validar Conexion' button that calls the validate endpoint and shows success/error feedback. Store config in localStorage. Style with Tailwind, dark theme matching existing UI.",
+    "Modify src/app/page.tsx - Add a settings gear icon button in the header that opens the AISettingsModal. Pass AI config state to FaceDetector component.",
+    "Modify src/components/FaceDetector.tsx - (a) Limit the video container width to max-w-[933px] (2/3 of 1400px) with mx-auto centering. (b) When AI is configured, call the generate-message API endpoint instead of using getRandomMessage() for the contextual message (throttle to avoid too many API calls, e.g., once every capture interval). (c) Below the video/emotion message section, ALWAYS show a 'Detecciones' panel that displays: number of detected persons and a list of each person with their individual emotion emoji and label (not just when >1 person like current code).",
+    "Update the individual emotions breakdown in FaceDetector.tsx to always show below the camera (even for 1 person), styled as a clear panel with a heading like 'Personas detectadas: N' and each person's emotion."
+  ],
+  "acceptance_criteria": [
+    "Running `npm run build` succeeds without TypeScript errors",
+    "A settings modal can be opened from the main page header",
+    "The settings modal allows entering base URL, API key, and model name",
+    "The validate button makes a POST to /api/ai/validate and shows the result",
+    "Settings are persisted in localStorage",
+    "When AI is configured, contextual messages are generated via the LLM API",
+    "When AI is not configured or fails, the existing static random messages are used as fallback",
+    "The camera video container does not exceed 933px width (2/3 of 1400px)",
+    "A detection panel always shows below the camera showing person count and individual emotions"
+  ],
+  "verification": [
+    "Run `npm run build` and confirm it completes successfully with exit code 0"
+  ],
+  "blocked_reason": null,
+  "findings": "Build succeeds with no TypeScript errors. The openai package was added successfully. The lucide-react package was already present in the project for icons. All new API routes (/api/ai/validate, /api/ai/generate-message) are server-rendered on demand as expected. Review fixes applied: (1) useRef for currentMessage to fix stale closure in saveCapture, (2) removed currentMessage from useEffect deps to prevent detection loop restart, (3) sanitized eventName and used system/user message separation for prompt injection mitigation, (4) added 10s AbortSignal timeout to AI completion calls, (5) added security note about API key in request body."
+}

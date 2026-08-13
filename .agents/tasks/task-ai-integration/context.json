@@ -1,0 +1,27 @@
+{
+  "project_type": "Next.js 16 fullstack app with App Router, real-time face emotion detection",
+  "language": "TypeScript",
+  "build_system": "npm with Next.js 16 build system",
+  "test_framework": "No test framework currently configured",
+  "build_command": "npm run build",
+  "test_command": "npm run build",
+  "verification_instructions": "Run `npm run build` to verify TypeScript compiles and Next.js bundles correctly. No unit tests exist.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "npm install, then npm run dev for development",
+  "environment_constraints": "OPEN_INTERNET - full network access available. Node.js v22, npm available.",
+  "contribution_requirements": "Follow Next.js 16 conventions per AGENTS.md. Use App Router patterns.",
+  "key_patterns": "Client components with 'use client' directive. API routes in src/app/api/. Lib files in src/lib/. Components in src/components/. Tailwind CSS 4 for styling. Drizzle ORM with Neon PostgreSQL. face-api.js for client-side face detection.",
+  "relevant_files": [
+    "src/components/FaceDetector.tsx",
+    "src/app/page.tsx",
+    "src/lib/emotions.ts",
+    "src/app/api/captures/route.ts",
+    "src/lib/db.ts",
+    "src/lib/schema.ts",
+    "src/app/layout.tsx",
+    "src/app/globals.css",
+    "package.json",
+    "next.config.ts"
+  ],
+  "directory_structure": "src/app/ - pages and API routes (App Router), src/components/ - React components, src/lib/ - shared libraries (db, schema, emotions), public/models/ - face-api.js model files"
+}
