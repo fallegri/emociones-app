@@ -1,14 +1,14 @@
 {
   "task_id": "task-flow-restructure",
   "task_description": "Restructure the main page flow with AI config check, event name input, and live mode toggle at bottom of detection view",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001"],
   "blocked_reason": null,
   "verification": {
-    "build": "pending",
+    "build": "pass",
     "tests": "skipped",
     "test_quality": "skipped",
     "docker_build": "skipped",
-    "summary": "Pending implementation"
+    "summary": "npm run build passes cleanly with Next.js 16.3.0 Turbopack. No TypeScript errors. All routes compile successfully."
   }
 }

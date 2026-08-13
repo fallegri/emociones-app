@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Restructure main page flow: AI config check first, then event name input, then detection with live mode toggle at bottom. Make dashboard link more visible. Person count prominent at top.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Modify src/app/page.tsx - Restructure into steps: Step 1 checks AI config (if not configured, show message + link to /settings), Step 2 shows event name input only (no mode selection), Step 3 shows detection view with person count at top and mode toggle at bottom",
     "2. Modify src/app/page.tsx - Move mode selection toggle to BOTTOM of detection view as two buttons (Contador/Snapshot), default to 'contador'",
@@ -23,5 +23,5 @@
     "Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build"
   ],
   "blocked_reason": null,
-  "findings": null
+  "findings": "Build passes cleanly. Added aiConfigChecked state to prevent flash of unconfigured state. Dashboard link text always visible (removed hidden sm:inline). Mode toggle at bottom with live switching and snapshot tracking reset."
 }
