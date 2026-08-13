@@ -90,12 +90,15 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const AI_THROTTLE_INTERVAL = 5000;
   const FACE_DISAPPEAR_RESET_MS = 3000;
   const SNAPSHOT_DISPLAY_MS = 10000;
+  const SNAPSHOT_STABILIZATION_MS = 1500; // Wait after mode switch before triggering snapshot
 
   // Reset snapshot tracking when switching to snapshot mode so current faces can trigger it
   const prevModeRef = useRef<string>(mode);
+  const snapshotModeActivatedAtRef = useRef<number>(0);
   useEffect(() => {
     if (mode === "snapshot" && prevModeRef.current !== "snapshot") {
       snapshotShownForFacesRef.current = new Set();
+      snapshotModeActivatedAtRef.current = Date.now();
     }
     prevModeRef.current = mode;
   }, [mode]);
@@ -299,17 +302,20 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
   // Handle snapshot mode trigger
   const triggerSnapshot = useCallback((faces: DetectedFace[], dominant: EmotionType, faceIds: number[]) => {
+    // Wait for stabilization after mode switch before triggering
+    if (Date.now() - snapshotModeActivatedAtRef.current < SNAPSHOT_STABILIZATION_MS) return;
+
     // Check if we already showed snapshot for these faces
     const allShown = faceIds.every((id) => snapshotShownForFacesRef.current.has(id));
     if (allShown && faceIds.length > 0) return;
 
-    // For groups: check if at least 50% have confidence > 0.3
+    // For groups: check if at least 50% have confidence > 0.15
     if (faces.length > 1) {
-      const confidentFaces = faces.filter((f) => f.confidence > 0.3);
+      const confidentFaces = faces.filter((f) => f.confidence > 0.15);
       if (confidentFaces.length < faces.length * 0.5) return;
     } else if (faces.length === 1) {
       // Single face must also meet minimum confidence threshold
-      if (faces[0].confidence <= 0.3) return;
+      if (faces[0].confidence <= 0.15) return;
     }
 
     const image = captureVideoSnapshot();
@@ -666,25 +672,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         )}
       </div>
 
-      {/* Emotion message (Contador mode only) */}
-      {mode === "contador" && currentMessage && dominantEmotion && (
-        <div
-          className="rounded-xl p-4 sm:p-6 text-center shadow-lg transition-all duration-500 animate-fade-in w-full lg:max-w-[933px] lg:mx-auto border border-white/10"
-          style={{
-            background: `linear-gradient(135deg, ${getEmotionBg(dominantEmotion)})`
-          }}
-        >
-          <p className="text-xl sm:text-2xl font-bold text-white mb-1">
-            {emotionEmojis[dominantEmotion]} {emotionLabels[dominantEmotion]}
-          </p>
-          <p className="text-white/90 text-sm sm:text-lg">{currentMessage}</p>
-          {detectedFaces.length > 1 && (
-            <p className="text-white/70 text-xs sm:text-sm mt-2">
-              Emociones del grupo: {detectedFaces.map(f => emotionEmojis[f.emotion]).join(" ")}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Emotion message removed from contador mode - messages are only shown via snapshot overlay */}
 
       {/* Detection panel */}
       {detectedFaces.length > 0 && (
