@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import FaceDetector from "@/components/FaceDetector";
 import Link from "next/link";
 import { Settings, BarChart3 } from "lucide-react";
-import { AIProviderConfig, AI_CONFIG_STORAGE_KEY } from "@/lib/ai-config";
+import { AIProviderConfig, AI_CONFIG_STORAGE_KEY, isAIConfigured } from "@/lib/ai-config";
 
 export default function Home() {
   const [eventName, setEventName] = useState("");
@@ -69,10 +69,13 @@ export default function Home() {
             )}
             <Link
               href="/settings"
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
+              className="relative p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
               title="Configuracion de IA"
             >
               <Settings size={20} />
+              {isAIConfigured(aiConfig) && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-gray-900" />
+              )}
             </Link>
             <Link
               href="/dashboard"
@@ -127,9 +130,9 @@ export default function Home() {
               {/* AI Status indicator */}
               <div className="mt-6 pt-6 border-t border-gray-700/50">
                 <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <div className={`w-2 h-2 rounded-full ${aiConfig ? "bg-emerald-400" : "bg-gray-600"}`} />
+                  <div className={`w-2 h-2 rounded-full ${isAIConfigured(aiConfig) ? "bg-emerald-400" : "bg-gray-600"}`} />
                   <span>
-                    {aiConfig ? "IA configurada" : "IA no configurada"} &middot;{" "}
+                    {isAIConfigured(aiConfig) ? "IA configurada" : "IA no configurada"} &middot;{" "}
                     <Link href="/settings" className="text-indigo-400 hover:text-indigo-300 transition-colors">
                       Configurar
                     </Link>

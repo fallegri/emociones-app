@@ -34,6 +34,8 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
   const [dominantEmotion, setDominantEmotion] = useState<EmotionType | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
   const aiMessagePending = useRef<boolean>(false);
@@ -68,15 +70,50 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
     loadModels();
   }, []);
 
-  // Start webcam
+  // Enumerate available video devices
   useEffect(() => {
-    if (!isModelLoaded) return;
+    const enumerateDevices = async () => {
+      try {
+        // Request a temporary stream to get device permissions (needed for labels)
+        const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        tempStream.getTracks().forEach((track) => track.stop());
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter((d) => d.kind === "videoinput");
+        setVideoDevices(cameras);
+        if (cameras.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(cameras[0].deviceId);
+        }
+      } catch (err) {
+        console.error("Error enumerating devices:", err);
+      }
+    };
+    if (isModelLoaded) {
+      enumerateDevices();
+    }
+  }, [isModelLoaded]);
+
+  // Start webcam with selected device
+  useEffect(() => {
+    if (!isModelLoaded || !selectedDeviceId) return;
 
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 720, height: 560, facingMode: "user" },
-        });
+        // Stop any existing stream before switching
+        if (videoRef.current?.srcObject) {
+          const existingTracks = (videoRef.current.srcObject as MediaStream).getTracks();
+          existingTracks.forEach((track) => track.stop());
+        }
+
+        const constraints: MediaStreamConstraints = {
+          video: {
+            deviceId: { exact: selectedDeviceId },
+            width: 720,
+            height: 560,
+          },
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -93,7 +130,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         tracks.forEach((track) => track.stop());
       }
     };
-  }, [isModelLoaded]);
+  }, [isModelLoaded, selectedDeviceId]);
 
   // Generate AI message
   const generateAIMessage = useCallback(
@@ -288,6 +325,26 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Camera selector */}
+      {videoDevices.length > 1 && (
+        <div className="w-full lg:max-w-[933px] lg:mx-auto">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+            Camara
+          </label>
+          <select
+            value={selectedDeviceId}
+            onChange={(e) => setSelectedDeviceId(e.target.value)}
+            className="w-full sm:w-auto px-3 py-2 bg-gray-800/80 border border-gray-700/50 rounded-lg text-sm text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
+          >
+            {videoDevices.map((device, index) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `Camara ${index + 1}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Video container - full width on mobile, max 2/3 of 1400px on desktop */}
       <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full lg:max-w-[933px] lg:mx-auto">
         {isLoading && (
