@@ -272,12 +272,12 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] bg-red-50 rounded-xl p-8">
+      <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] bg-red-900/20 border border-red-700/30 rounded-xl p-6 sm:p-8">
         <div className="text-center">
-          <p className="text-red-600 text-lg font-medium">{error}</p>
+          <p className="text-red-400 text-base sm:text-lg font-medium">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-all duration-200"
           >
             Reintentar
           </button>
@@ -287,14 +287,14 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
   }
 
   return (
-    <div className="space-y-4">
-      {/* Video container - max 2/3 of 1400px = 933px */}
-      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl max-w-[933px] mx-auto">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Video container - full width on mobile, max 2/3 of 1400px on desktop */}
+      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full lg:max-w-[933px] lg:mx-auto">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
-              <p className="text-gray-300">Cargando modelos de IA...</p>
+              <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+              <p className="text-gray-300 text-sm">Cargando modelos de IA...</p>
             </div>
           </div>
         )}
@@ -303,7 +303,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
           autoPlay
           muted
           playsInline
-          className="w-full max-h-[560px] object-cover"
+          className="w-full max-h-[400px] sm:max-h-[480px] lg:max-h-[560px] object-cover"
           onLoadedMetadata={() => {
             if (canvasRef.current && videoRef.current) {
               canvasRef.current.width = videoRef.current.videoWidth;
@@ -317,15 +317,15 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         />
 
         {/* Overlay info */}
-        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2">
-          <p className="text-emerald-400 text-sm font-medium">
-            📡 {detectedFaces.length > 0 ? "Detectando" : "Buscando rostros..."}
+        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2">
+          <p className="text-emerald-400 text-xs sm:text-sm font-medium">
+            📡 {detectedFaces.length > 0 ? "Detectando" : "Buscando..."}
           </p>
         </div>
 
         {detectedFaces.length > 0 && (
-          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-2">
-            <p className="text-white text-sm">
+          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2">
+            <p className="text-white text-xs sm:text-sm">
               👥 <span className="font-bold">{detectedFaces.length}</span>{" "}
               {detectedFaces.length === 1 ? "persona" : "personas"}
             </p>
@@ -336,17 +336,17 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
       {/* Emotion message */}
       {currentMessage && dominantEmotion && (
         <div
-          className="rounded-xl p-6 text-center shadow-lg transition-all duration-500 animate-fade-in max-w-[933px] mx-auto"
+          className="rounded-xl p-4 sm:p-6 text-center shadow-lg transition-all duration-500 animate-fade-in w-full lg:max-w-[933px] lg:mx-auto border border-white/10"
           style={{
             background: `linear-gradient(135deg, ${getEmotionBg(dominantEmotion)})`
           }}
         >
-          <p className="text-2xl font-bold text-white mb-1">
+          <p className="text-xl sm:text-2xl font-bold text-white mb-1">
             {emotionEmojis[dominantEmotion]} {emotionLabels[dominantEmotion]}
           </p>
-          <p className="text-white/90 text-lg">{currentMessage}</p>
+          <p className="text-white/90 text-sm sm:text-lg">{currentMessage}</p>
           {detectedFaces.length > 1 && (
-            <p className="text-white/70 text-sm mt-2">
+            <p className="text-white/70 text-xs sm:text-sm mt-2">
               Emociones del grupo: {detectedFaces.map(f => emotionEmojis[f.emotion]).join(" ")}
             </p>
           )}
@@ -355,22 +355,23 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
 
       {/* Detection panel - ALWAYS shown when faces are detected */}
       {detectedFaces.length > 0 && (
-        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 max-w-[933px] mx-auto">
-          <h3 className="text-white font-semibold mb-3 text-sm">
-            👥 Personas detectadas: {detectedFaces.length}
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-700/50 w-full lg:max-w-[933px] lg:mx-auto">
+          <h3 className="text-white font-semibold mb-3 text-xs sm:text-sm flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            Personas detectadas: {detectedFaces.length}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
             {detectedFaces.map((face, i) => (
               <div
                 key={i}
-                className="bg-gray-900 rounded-lg p-3 text-center border border-gray-700"
+                className="bg-gray-900/60 rounded-lg p-2.5 sm:p-3 text-center border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
               >
-                <p className="text-2xl">{emotionEmojis[face.emotion]}</p>
-                <p className="text-white text-xs mt-1">
-                  Persona {i + 1}: {emotionLabels[face.emotion]}
+                <p className="text-xl sm:text-2xl">{emotionEmojis[face.emotion]}</p>
+                <p className="text-white text-[10px] sm:text-xs mt-1 font-medium">
+                  Persona {i + 1}
                 </p>
-                <p className="text-gray-400 text-xs">
-                  {Math.round(face.confidence * 100)}%
+                <p className="text-gray-400 text-[10px] sm:text-xs">
+                  {emotionLabels[face.emotion]} {Math.round(face.confidence * 100)}%
                 </p>
               </div>
             ))}

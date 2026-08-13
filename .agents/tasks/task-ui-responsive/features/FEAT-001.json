@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Convert AI Settings Modal to a dedicated /settings page, make the entire interface responsive with proper mobile/tablet/desktop breakpoints, and improve overall styling with better spacing, transitions, and visual hierarchy.",
+  "status": "in_progress",
+  "steps": [
+    "Create src/app/settings/page.tsx - A dedicated settings page with the same functionality as the modal but as a full page with a back button/link to return home",
+    "Remove src/components/AISettingsModal.tsx modal component",
+    "Modify src/app/page.tsx - Replace modal state and import with a Link to /settings, make layout responsive with mobile/tablet/desktop breakpoints",
+    "Modify src/components/FaceDetector.tsx - Make video responsive (full width on mobile, 2/3 on desktop), responsive detection panel grid",
+    "Modify src/app/dashboard/page.tsx - Responsive header navigation and grid/chart sizing",
+    "Improve src/app/globals.css with better global styles, transitions, and animations"
+  ],
+  "acceptance_criteria": [
+    "Settings gear icon navigates to /settings page instead of opening a modal",
+    "The /settings page has full AI configuration functionality (base URL, API key, model name, validate, save)",
+    "The /settings page has a back button/link to return to the home page",
+    "The AISettingsModal.tsx component is removed",
+    "The interface is responsive on mobile, tablet, and desktop",
+    "FaceDetector video is full width on mobile and 2/3 on desktop",
+    "Dashboard has responsive grid and chart sizing",
+    "Header navigation adapts on mobile",
+    "Build passes with npm run build"
+  ],
+  "verification": [
+    "Run `npm run build` and confirm it completes successfully with exit code 0"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}
