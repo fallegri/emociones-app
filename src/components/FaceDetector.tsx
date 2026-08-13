@@ -37,8 +37,16 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
   const aiMessagePending = useRef<boolean>(false);
+  // Ref to track latest message value for use inside the detection loop
+  // without causing effect re-runs (fixes stale closure issue)
+  const currentMessageRef = useRef<string>("");
   const CAPTURE_INTERVAL = 5000; // Save to DB every 5 seconds if faces detected
   const AI_THROTTLE_INTERVAL = 5000; // Only call AI every 5 seconds
+
+  // Keep the ref in sync with state so the detection loop always has the latest message
+  useEffect(() => {
+    currentMessageRef.current = currentMessage;
+  }, [currentMessage]);
 
   // Load face-api models
   useEffect(() => {
@@ -114,11 +122,14 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         const data = await response.json();
         if (data.message) {
           setCurrentMessage(data.message);
+          currentMessageRef.current = data.message;
         }
       } catch {
         // Fallback to static message on network error
         const isGroup = personCount > 1;
-        setCurrentMessage(getRandomMessage(dominant, isGroup));
+        const fallback = getRandomMessage(dominant, isGroup);
+        setCurrentMessage(fallback);
+        currentMessageRef.current = fallback;
       } finally {
         aiMessagePending.current = false;
       }
@@ -226,6 +237,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
           const isGroup = faces.length > 1;
           const message = getRandomMessage(dominant, isGroup);
           setCurrentMessage(message);
+          currentMessageRef.current = message;
         }
 
         // Auto-save to database at intervals
@@ -237,7 +249,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
             personCount: faces.length,
             emotions,
             dominantEmotion: dominant,
-            message: currentMessage,
+            message: currentMessageRef.current,
           };
           saveCapture(captureData);
         }
@@ -256,7 +268,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isModelLoaded, eventName, saveCapture, aiConfig, generateAIMessage, currentMessage]);
+  }, [isModelLoaded, eventName, saveCapture, aiConfig, generateAIMessage]);
 
   if (error) {
     return (

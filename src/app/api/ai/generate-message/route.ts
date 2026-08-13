@@ -2,12 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { createOpenAIClient, AIProviderConfig } from "@/lib/ai-config";
 import { EmotionType, getRandomMessage } from "@/lib/emotions";
 
+// NOTE: Security consideration - the API key is sent in the request body from the client.
+// This is acceptable for now because the key is already stored in localStorage (visible to the user)
+// and the transport is HTTPS. A production system should use server-side session storage.
+
 interface GenerateMessageRequest {
   emotions: EmotionType[];
   personCount: number;
   dominantEmotion: EmotionType;
   eventName: string;
   aiConfig: AIProviderConfig | null;
+}
+
+const AI_TIMEOUT_MS = 10_000; // 10 second timeout for AI calls
+
+/**
+ * Sanitize user-provided event name to prevent prompt injection.
+ * Truncates to 100 chars and strips control characters.
+ */
+function sanitizeEventName(name: string): string {
+  return name
+    .slice(0, 100)
+    .replace(/[\x00-\x1f\x7f-\x9f]/g, "")
+    .trim();
 }
 
 export async function POST(request: NextRequest) {
@@ -24,16 +41,28 @@ export async function POST(request: NextRequest) {
 
     const client = createOpenAIClient(aiConfig);
 
+    const sanitizedEventName = sanitizeEventName(eventName);
     const emotionList = emotions.join(", ");
-    const prompt = `Eres un asistente en un evento llamado "${eventName}". Se detectaron ${personCount} persona(s) con las siguientes emociones: ${emotionList}. La emocion dominante es "${dominantEmotion}".
 
-Genera un mensaje corto, creativo y motivador en espanol (maximo 2 oraciones) que sea relevante para el ambiente emocional del grupo. Usa emojis apropiados. No incluyas explicaciones, solo el mensaje.`;
+    const systemPrompt = `Eres un asistente motivador en un evento. Tu trabajo es generar mensajes cortos, creativos y motivadores en espanol (maximo 2 oraciones) basados en las emociones detectadas en los asistentes. Usa emojis apropiados. No incluyas explicaciones, solo el mensaje.`;
+
+    const userContent = `Evento: ${sanitizedEventName}
+Personas detectadas: ${personCount}
+Emociones: ${emotionList}
+Emocion dominante: ${dominantEmotion}
+
+Genera un mensaje motivador apropiado para este ambiente emocional.`;
 
     const response = await client.chat.completions.create({
       model: aiConfig.modelName,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
       max_tokens: 150,
       temperature: 0.8,
+    }, {
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     });
 
     const aiMessage = response.choices?.[0]?.message?.content?.trim();

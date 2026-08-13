@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOpenAIClient } from "@/lib/ai-config";
 
+const VALIDATE_TIMEOUT_MS = 10_000; // 10 second timeout for validation calls
+
 export async function POST(request: NextRequest) {
   try {
     const { baseUrl, apiKey, model } = await request.json();
@@ -18,6 +20,8 @@ export async function POST(request: NextRequest) {
       model,
       messages: [{ role: "user", content: "Di hola en una palabra." }],
       max_tokens: 10,
+    }, {
+      signal: AbortSignal.timeout(VALIDATE_TIMEOUT_MS),
     });
 
     if (response.choices && response.choices.length > 0) {
