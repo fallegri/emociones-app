@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Restructure main page flow: AI config check first, then event name input, then detection with live mode toggle at bottom. Make dashboard link more visible. Person count prominent at top.",
+  "status": "in_progress",
+  "steps": [
+    "1. Modify src/app/page.tsx - Restructure into steps: Step 1 checks AI config (if not configured, show message + link to /settings), Step 2 shows event name input only (no mode selection), Step 3 shows detection view with person count at top and mode toggle at bottom",
+    "2. Modify src/app/page.tsx - Move mode selection toggle to BOTTOM of detection view as two buttons (Contador/Snapshot), default to 'contador'",
+    "3. Modify src/app/page.tsx - Make dashboard link more prominent/visible",
+    "4. Modify src/components/FaceDetector.tsx - In snapshot mode: capture image + show poem. In contador mode: only counting, no snapshot capture. Ensure mode switching works live."
+  ],
+  "acceptance_criteria": [
+    "If AI is not configured, user sees a message directing them to /settings before proceeding",
+    "If AI is configured, user goes directly to event name input (no mode selection at this step)",
+    "After entering event name, detection starts immediately in 'contador' mode by default",
+    "Mode toggle (Contador/Snapshot) is at the BOTTOM of the detection screen and can be switched live",
+    "Person count is prominently displayed at the top of the detection view",
+    "Dashboard link is clearly visible and accessible",
+    "The camera icon capture counter is separate from the person count",
+    "npm run build completes without errors"
+  ],
+  "verification": [
+    "Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}

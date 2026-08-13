@@ -1,0 +1,11 @@
+{
+  "project_type": "Next.js 16 App Router with TypeScript, real-time emotion detection via face-api.js",
+  "language": "TypeScript/React",
+  "build_system": "Next.js 16 with Turbopack, npm scripts",
+  "test_framework": "No test framework configured - validation is via build only",
+  "build_command": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+  "test_command": "No test command available - use build for validation",
+  "verification_instructions": "Run npm run build successfully with no TypeScript errors",
+  "setup_instructions": "Dependencies already installed. Build with: npm run build",
+  "environment_constraints": "OPEN_INTERNET network mode. Node.js v22 via nvm. Must prefix npm/node commands with nvm setup."
+}

@@ -72,6 +72,15 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const FACE_DISAPPEAR_RESET_MS = 3000;
   const SNAPSHOT_DISPLAY_MS = 5000;
 
+  // Reset snapshot tracking when switching to snapshot mode so current faces can trigger it
+  const prevModeRef = useRef<string>(mode);
+  useEffect(() => {
+    if (mode === "snapshot" && prevModeRef.current !== "snapshot") {
+      snapshotShownForFacesRef.current = new Set();
+    }
+    prevModeRef.current = mode;
+  }, [mode]);
+
   // Keep the ref in sync with state
   useEffect(() => {
     currentMessageRef.current = currentMessage;

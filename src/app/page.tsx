@@ -13,6 +13,7 @@ export default function Home() {
   const [isStarted, setIsStarted] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
   const [aiConfig, setAiConfig] = useState<AIProviderConfig | null>(null);
+  const [aiConfigChecked, setAiConfigChecked] = useState(false);
   const [mode, setMode] = useState<DetectionMode>("contador");
   const [personCount, setPersonCount] = useState(0);
 
@@ -25,6 +26,7 @@ export default function Home() {
         // ignore invalid stored data
       }
     }
+    setAiConfigChecked(true);
   }, []);
 
   // Re-check AI config when page gains focus (user may have changed it in /settings)
@@ -55,6 +57,9 @@ export default function Home() {
     }
   };
 
+  // Determine current step
+  const aiReady = isAIConfigured(aiConfig);
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Header */}
@@ -81,7 +86,7 @@ export default function Home() {
               title="Configuracion de IA"
             >
               <Settings size={20} />
-              {isAIConfigured(aiConfig) && (
+              {aiReady && (
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-gray-900" />
               )}
             </Link>
@@ -90,15 +95,61 @@ export default function Home() {
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg shadow-indigo-600/20"
             >
               <BarChart3 size={16} />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span>Dashboard</span>
             </Link>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {!isStarted ? (
-          /* Event setup */
+        {!aiConfigChecked ? (
+          /* Loading AI config check */
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+              <p className="text-gray-400 text-sm">Verificando configuracion...</p>
+            </div>
+          </div>
+        ) : !aiReady && !isStarted ? (
+          /* Step 1: AI not configured - prompt to configure */
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-10 shadow-2xl border border-gray-700/50 w-full max-w-md text-center">
+              <div className="mb-6">
+                <span className="text-5xl sm:text-6xl mb-4 block">⚙️</span>
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                  Configurar IA
+                </h2>
+                <p className="text-sm sm:text-base text-gray-400">
+                  Para comenzar, necesitas configurar un proveedor de IA. Esto permite generar mensajes contextuales con las emociones detectadas.
+                </p>
+              </div>
+
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-2 px-6 py-3.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-500 transition-all duration-200 shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40"
+              >
+                <Settings size={20} />
+                Ir a Configuracion
+              </Link>
+
+              <p className="text-[10px] text-gray-600 text-center mt-6">
+                Compatible con OpenAI, NVIDIA NIM, Ollama y cualquier proveedor OpenAI-compatible.
+              </p>
+
+              {/* Dashboard link below */}
+              <div className="mt-6 pt-6 border-t border-gray-700/50">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors text-sm"
+                >
+                  <BarChart3 size={16} />
+                  Ver Dashboard de eventos anteriores
+                </Link>
+              </div>
+            </div>
+          </div>
+        ) : !isStarted ? (
+          /* Step 2: Event name input (AI is configured) */
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-10 shadow-2xl border border-gray-700/50 w-full max-w-md">
               <div className="text-center mb-8">
@@ -126,41 +177,6 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Mode Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Modo de Deteccion
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setMode("snapshot")}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
-                        mode === "snapshot"
-                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                          : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
-                      }`}
-                    >
-                      <Camera size={20} />
-                      <span className="text-xs font-medium">Snapshot</span>
-                      <span className="text-[10px] text-gray-500">Captura + Poema</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMode("contador")}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
-                        mode === "contador"
-                          ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                          : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
-                      }`}
-                    >
-                      <Users size={20} />
-                      <span className="text-xs font-medium">Contador</span>
-                      <span className="text-[10px] text-gray-500">Solo conteo</span>
-                    </button>
-                  </div>
-                </div>
-
                 <button
                   onClick={handleStart}
                   disabled={!eventName.trim()}
@@ -173,11 +189,11 @@ export default function Home() {
               {/* AI Status indicator */}
               <div className="mt-6 pt-6 border-t border-gray-700/50">
                 <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <div className={`w-2 h-2 rounded-full ${isAIConfigured(aiConfig) ? "bg-emerald-400" : "bg-gray-600"}`} />
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
                   <span>
-                    {isAIConfigured(aiConfig) ? "IA configurada" : "IA no configurada"} &middot;{" "}
+                    IA configurada &middot;{" "}
                     <Link href="/settings" className="text-indigo-400 hover:text-indigo-300 transition-colors">
-                      Configurar
+                      Cambiar
                     </Link>
                   </span>
                 </div>
@@ -188,29 +204,28 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          /* Active detection */
+          /* Step 3: Active detection with mode toggle at bottom */
           <div className="space-y-4 sm:space-y-6">
-            {/* Live stats card */}
-            <div className="bg-gradient-to-r from-emerald-900/40 to-emerald-800/20 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-emerald-500/30 animate-stats-pulse">
+            {/* Live stats card - Person count prominent at top */}
+            <div className="bg-gradient-to-r from-emerald-900/40 to-emerald-800/20 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-emerald-500/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-                    <Users className="text-emerald-400" size={24} />
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <Users className="text-emerald-400" size={28} />
                   </div>
                   <div>
-                    <p className="text-emerald-400/80 text-xs sm:text-sm font-medium">Personas Unicas Detectadas</p>
-                    <p className="text-3xl sm:text-4xl font-bold text-white">{personCount}</p>
+                    <p className="text-emerald-400/80 text-xs sm:text-sm font-medium">Personas Detectadas</p>
+                    <p className="text-4xl sm:text-5xl font-bold text-white">{personCount}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                    mode === "snapshot"
-                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                      : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                  }`}>
-                    {mode === "snapshot" ? <Camera size={12} /> : <Users size={12} />}
-                    {mode === "snapshot" ? "Snapshot" : "Contador"}
-                  </span>
+                <div className="text-right space-y-2">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/80 text-white rounded-lg hover:bg-indigo-500 transition-all duration-200 text-xs font-medium"
+                  >
+                    <BarChart3 size={14} />
+                    Dashboard
+                  </Link>
                 </div>
               </div>
             </div>
@@ -243,6 +258,43 @@ export default function Home() {
               onCapture={() => setCaptureCount((c) => c + 1)}
               onPersonCount={handlePersonCount}
             />
+
+            {/* Mode toggle at BOTTOM */}
+            <div className="bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50 w-full lg:max-w-[933px] lg:mx-auto">
+              <p className="text-xs text-gray-400 text-center mb-3 font-medium">Modo de Deteccion</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMode("contador")}
+                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                    mode === "contador"
+                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-400 shadow-lg shadow-indigo-500/10"
+                      : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
+                  }`}
+                >
+                  <Users size={20} />
+                  <div className="text-left">
+                    <span className="text-sm font-medium block">Contador</span>
+                    <span className="text-[10px] text-gray-500">Solo conteo</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("snapshot")}
+                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                    mode === "snapshot"
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/10"
+                      : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
+                  }`}
+                >
+                  <Camera size={20} />
+                  <div className="text-left">
+                    <span className="text-sm font-medium block">Snapshot</span>
+                    <span className="text-[10px] text-gray-500">Captura + Poema</span>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
