@@ -1,0 +1,7 @@
+{
+  "task_id": "task-dual-mode-detection",
+  "task_description": "Add dual detection modes (Snapshot and Contador), face tracking/deduplication to avoid counting same person multiple times, live stats card showing unique person count, poem-based messages for snapshot mode, and CSV/Excel export from dashboard",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

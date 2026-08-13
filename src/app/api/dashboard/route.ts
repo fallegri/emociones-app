@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const eventName = searchParams.get("event");
     const dateFrom = searchParams.get("from");
     const dateTo = searchParams.get("to");
+    const format = searchParams.get("format");
 
     // Build conditions
     const conditions = [];
@@ -23,6 +24,54 @@ export async function GET(request: NextRequest) {
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // CSV export mode - return full dataset as CSV
+    if (format === "csv") {
+      const allCaptures = await db
+        .select()
+        .from(emotionCaptures)
+        .where(whereClause)
+        .orderBy(sql`${emotionCaptures.capturedAt} DESC`);
+
+      const csvHeader = "Evento,Fecha,Hora,Personas,Emocion Dominante,Mensaje";
+      const csvRows = allCaptures.map((capture) => {
+        const date = new Date(capture.capturedAt);
+        const fecha = date.toLocaleDateString("es-ES", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        const hora = date.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        const escapeCsv = (str: string) => {
+          if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+        return [
+          escapeCsv(capture.eventName),
+          fecha,
+          hora,
+          capture.personCount.toString(),
+          escapeCsv(capture.dominantEmotion),
+          escapeCsv(capture.message || ""),
+        ].join(",");
+      });
+
+      const csvContent = [csvHeader, ...csvRows].join("\n");
+
+      return new Response(csvContent, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="emociones_export.csv"`,
+        },
+      });
+    }
 
     // Peak hours data
     const peakHours = await db

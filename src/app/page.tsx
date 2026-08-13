@@ -3,14 +3,18 @@
 import { useState, useEffect } from "react";
 import FaceDetector from "@/components/FaceDetector";
 import Link from "next/link";
-import { Settings, BarChart3 } from "lucide-react";
+import { Settings, BarChart3, Camera, Users } from "lucide-react";
 import { AIProviderConfig, AI_CONFIG_STORAGE_KEY, isAIConfigured } from "@/lib/ai-config";
+
+type DetectionMode = "snapshot" | "contador";
 
 export default function Home() {
   const [eventName, setEventName] = useState("");
   const [isStarted, setIsStarted] = useState(false);
   const [captureCount, setCaptureCount] = useState(0);
   const [aiConfig, setAiConfig] = useState<AIProviderConfig | null>(null);
+  const [mode, setMode] = useState<DetectionMode>("contador");
+  const [personCount, setPersonCount] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
@@ -118,6 +122,41 @@ export default function Home() {
                   />
                 </div>
 
+                {/* Mode Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Modo de Deteccion
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMode("snapshot")}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
+                        mode === "snapshot"
+                          ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                          : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
+                      }`}
+                    >
+                      <Camera size={20} />
+                      <span className="text-xs font-medium">Snapshot</span>
+                      <span className="text-[10px] text-gray-500">Captura + Poema</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("contador")}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
+                        mode === "contador"
+                          ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                          : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/50"
+                      }`}
+                    >
+                      <Users size={20} />
+                      <span className="text-xs font-medium">Contador</span>
+                      <span className="text-[10px] text-gray-500">Solo conteo</span>
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   onClick={handleStart}
                   disabled={!eventName.trim()}
@@ -147,6 +186,31 @@ export default function Home() {
         ) : (
           /* Active detection */
           <div className="space-y-4 sm:space-y-6">
+            {/* Live stats card */}
+            <div className="bg-gradient-to-r from-emerald-900/40 to-emerald-800/20 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-emerald-500/30 animate-stats-pulse">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <Users className="text-emerald-400" size={24} />
+                  </div>
+                  <div>
+                    <p className="text-emerald-400/80 text-xs sm:text-sm font-medium">Personas Unicas Detectadas</p>
+                    <p className="text-3xl sm:text-4xl font-bold text-white">{personCount}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    mode === "snapshot"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                      : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                  }`}>
+                    {mode === "snapshot" ? <Camera size={12} /> : <Users size={12} />}
+                    {mode === "snapshot" ? "Snapshot" : "Contador"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <h2 className="text-base sm:text-lg font-bold text-white truncate">
@@ -160,6 +224,7 @@ export default function Home() {
                 onClick={() => {
                   setIsStarted(false);
                   setCaptureCount(0);
+                  setPersonCount(0);
                 }}
                 className="shrink-0 px-3 sm:px-4 py-2 bg-red-600/10 text-red-400 border border-red-600/20 rounded-lg hover:bg-red-600/20 transition-all duration-200 text-xs sm:text-sm"
               >
@@ -170,7 +235,9 @@ export default function Home() {
             <FaceDetector
               eventName={eventName}
               aiConfig={aiConfig}
+              mode={mode}
               onCapture={() => setCaptureCount((c) => c + 1)}
+              onPersonCount={(count) => setPersonCount(count)}
             />
           </div>
         )}

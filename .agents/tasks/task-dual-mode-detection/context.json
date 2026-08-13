@@ -1,0 +1,26 @@
+{
+  "project_type": "Next.js 16 App Router with TypeScript, real-time emotion detection via face-api.js",
+  "language": "TypeScript/React",
+  "build_system": "Next.js 16 with Turbopack, npm scripts",
+  "test_framework": "No test framework configured - validation is via build only",
+  "build_command": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+  "test_command": "No test command available - use build for validation",
+  "verification_instructions": "Run npm run build successfully with no TypeScript errors",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Dependencies already installed. Build with: npm run build",
+  "environment_constraints": "OPEN_INTERNET network mode. Node.js v22 via nvm. Must prefix npm/node commands with: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" &&. Next.js 16 has breaking changes: params/searchParams are promises. Check node_modules/next/dist/docs/ for API reference. AGENTS.md rule: read relevant Next.js docs before writing code.",
+  "contribution_requirements": "Follow existing code style - dark theme, Tailwind CSS 4 utility classes, Spanish UI labels, lucide-react icons. Client components use 'use client' directive.",
+  "key_patterns": "FaceDetector component uses requestAnimationFrame detection loop with face-api.js TinyFaceDetector. Saves captures every 5s to /api/captures. Uses refs for timing control (lastCaptureTime, lastAICallTime). Message generation via AI or static fallback. Dashboard fetches from /api/dashboard. All pages use dark gradient bg-gray-900 theme with emerald/indigo accent colors.",
+  "relevant_files": [
+    "src/app/page.tsx",
+    "src/components/FaceDetector.tsx",
+    "src/lib/emotions.ts",
+    "src/app/dashboard/page.tsx",
+    "src/app/api/captures/route.ts",
+    "src/app/api/dashboard/route.ts",
+    "src/lib/schema.ts",
+    "src/app/globals.css",
+    "src/lib/ai-config.ts"
+  ],
+  "directory_structure": "src/app/ - App Router pages and API routes. src/components/ - React components (FaceDetector.tsx). src/lib/ - Utilities (emotions.ts, ai-config.ts, db.ts, schema.ts). public/models/ - face-api.js model files."
+}

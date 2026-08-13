@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as faceapi from "face-api.js";
 import { EmotionType, emotionLabels, emotionEmojis, getRandomMessage, getGroupDominantEmotion } from "@/lib/emotions";
+import { getRandomPoem } from "@/lib/poems";
 import { AIProviderConfig } from "@/lib/ai-config";
 
 interface DetectedFace {
@@ -11,10 +12,21 @@ interface DetectedFace {
   position: { x: number; y: number; width: number; height: number };
 }
 
+interface TrackedFace {
+  id: number;
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
+  lastSeen: number;
+}
+
 interface Props {
   eventName: string;
   aiConfig?: AIProviderConfig | null;
+  mode: "snapshot" | "contador";
   onCapture?: (data: CaptureData) => void;
+  onPersonCount?: (count: number) => void;
 }
 
 export interface CaptureData {
@@ -25,7 +37,7 @@ export interface CaptureData {
   message: string;
 }
 
-export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) {
+export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onPersonCount }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,16 +48,31 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+
+  // Snapshot mode state
+  const [snapshotImage, setSnapshotImage] = useState<string | null>(null);
+  const [snapshotPoem, setSnapshotPoem] = useState<string>("");
+  const [snapshotEmotion, setSnapshotEmotion] = useState<EmotionType | null>(null);
+  const [isSnapshotActive, setIsSnapshotActive] = useState(false);
+
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
   const aiMessagePending = useRef<boolean>(false);
-  // Ref to track latest message value for use inside the detection loop
-  // without causing effect re-runs (fixes stale closure issue)
   const currentMessageRef = useRef<string>("");
-  const CAPTURE_INTERVAL = 5000; // Save to DB every 5 seconds if faces detected
-  const AI_THROTTLE_INTERVAL = 5000; // Only call AI every 5 seconds
 
-  // Keep the ref in sync with state so the detection loop always has the latest message
+  // Face tracking refs
+  const trackedFacesRef = useRef<TrackedFace[]>([]);
+  const uniquePersonCountRef = useRef<number>(0);
+  const nextFaceIdRef = useRef<number>(1);
+  const lastFacesSeenTimeRef = useRef<number>(Date.now());
+  const snapshotShownForFacesRef = useRef<Set<number>>(new Set());
+
+  const CAPTURE_INTERVAL = 5000;
+  const AI_THROTTLE_INTERVAL = 5000;
+  const FACE_DISAPPEAR_RESET_MS = 3000;
+  const SNAPSHOT_DISPLAY_MS = 5000;
+
+  // Keep the ref in sync with state
   useEffect(() => {
     currentMessageRef.current = currentMessage;
   }, [currentMessage]);
@@ -74,7 +101,6 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
   useEffect(() => {
     const enumerateDevices = async () => {
       try {
-        // Request a temporary stream to get device permissions (needed for labels)
         const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
         tempStream.getTracks().forEach((track) => track.stop());
 
@@ -99,7 +125,6 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
 
     const startCamera = async () => {
       try {
-        // Stop any existing stream before switching
         if (videoRef.current?.srcObject) {
           const existingTracks = (videoRef.current.srcObject as MediaStream).getTracks();
           existingTracks.forEach((track) => track.stop());
@@ -132,6 +157,137 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
     };
   }, [isModelLoaded, selectedDeviceId]);
 
+  // Face tracking: match detected faces to tracked faces
+  const updateTracking = useCallback((faces: DetectedFace[]): number[] => {
+    const now = Date.now();
+
+    if (faces.length === 0) {
+      // If no faces for more than FACE_DISAPPEAR_RESET_MS, reset tracking
+      if (now - lastFacesSeenTimeRef.current > FACE_DISAPPEAR_RESET_MS) {
+        trackedFacesRef.current = [];
+        uniquePersonCountRef.current = 0;
+        nextFaceIdRef.current = 1;
+        snapshotShownForFacesRef.current = new Set();
+        onPersonCount?.(0);
+      }
+      return [];
+    }
+
+    lastFacesSeenTimeRef.current = now;
+
+    const currentTracked = trackedFacesRef.current;
+    const matchedTrackIds: number[] = [];
+    const unmatchedFaceIndices: number[] = [];
+    const usedTrackedIndices = new Set<number>();
+
+    // For each detected face, try to match to existing tracked face
+    faces.forEach((face, faceIdx) => {
+      const faceCenterX = face.position.x + face.position.width / 2;
+      const faceCenterY = face.position.y + face.position.height / 2;
+      const threshold = face.position.width * 0.5;
+
+      let bestMatch = -1;
+      let bestDist = Infinity;
+
+      currentTracked.forEach((tracked, trackIdx) => {
+        if (usedTrackedIndices.has(trackIdx)) return;
+        const dist = Math.sqrt(
+          Math.pow(faceCenterX - tracked.centerX, 2) +
+          Math.pow(faceCenterY - tracked.centerY, 2)
+        );
+        if (dist < threshold && dist < bestDist) {
+          bestDist = dist;
+          bestMatch = trackIdx;
+        }
+      });
+
+      if (bestMatch >= 0) {
+        // Update tracked face position
+        usedTrackedIndices.add(bestMatch);
+        currentTracked[bestMatch].centerX = faceCenterX;
+        currentTracked[bestMatch].centerY = faceCenterY;
+        currentTracked[bestMatch].width = face.position.width;
+        currentTracked[bestMatch].height = face.position.height;
+        currentTracked[bestMatch].lastSeen = now;
+        matchedTrackIds.push(currentTracked[bestMatch].id);
+      } else {
+        unmatchedFaceIndices.push(faceIdx);
+      }
+    });
+
+    // Create new tracked faces for unmatched detections
+    unmatchedFaceIndices.forEach((faceIdx) => {
+      const face = faces[faceIdx];
+      const newId = nextFaceIdRef.current++;
+      const newTracked: TrackedFace = {
+        id: newId,
+        centerX: face.position.x + face.position.width / 2,
+        centerY: face.position.y + face.position.height / 2,
+        width: face.position.width,
+        height: face.position.height,
+        lastSeen: now,
+      };
+      currentTracked.push(newTracked);
+      uniquePersonCountRef.current++;
+      matchedTrackIds.push(newId);
+    });
+
+    // Remove old tracked faces (not seen for a while)
+    trackedFacesRef.current = currentTracked.filter(
+      (t) => now - t.lastSeen < FACE_DISAPPEAR_RESET_MS
+    );
+
+    onPersonCount?.(uniquePersonCountRef.current);
+    return matchedTrackIds;
+  }, [onPersonCount]);
+
+  // Capture snapshot from video
+  const captureVideoSnapshot = useCallback((): string | null => {
+    const video = videoRef.current;
+    if (!video) return null;
+
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    const ctx = tempCanvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0);
+    return tempCanvas.toDataURL("image/jpeg", 0.85);
+  }, []);
+
+  // Handle snapshot mode trigger
+  const triggerSnapshot = useCallback((faces: DetectedFace[], dominant: EmotionType, faceIds: number[]) => {
+    // Check if we already showed snapshot for these faces
+    const allShown = faceIds.every((id) => snapshotShownForFacesRef.current.has(id));
+    if (allShown && faceIds.length > 0) return;
+
+    // For groups: check if at least 50% have confidence > 0.3
+    if (faces.length > 1) {
+      const confidentFaces = faces.filter((f) => f.confidence > 0.3);
+      if (confidentFaces.length < faces.length * 0.5) return;
+    }
+
+    const image = captureVideoSnapshot();
+    if (!image) return;
+
+    const poem = getRandomPoem(dominant);
+    setSnapshotImage(image);
+    setSnapshotPoem(poem);
+    setSnapshotEmotion(dominant);
+    setIsSnapshotActive(true);
+
+    // Mark these faces as snapshot-shown
+    faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
+
+    // Auto-dismiss after SNAPSHOT_DISPLAY_MS
+    setTimeout(() => {
+      setIsSnapshotActive(false);
+      setSnapshotImage(null);
+      setSnapshotPoem("");
+      setSnapshotEmotion(null);
+    }, SNAPSHOT_DISPLAY_MS);
+  }, [captureVideoSnapshot]);
+
   // Generate AI message
   const generateAIMessage = useCallback(
     async (emotions: EmotionType[], personCount: number, dominant: EmotionType) => {
@@ -162,7 +318,6 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
           currentMessageRef.current = data.message;
         }
       } catch {
-        // Fallback to static message on network error
         const isGroup = personCount > 1;
         const fallback = getRandomMessage(dominant, isGroup);
         setCurrentMessage(fallback);
@@ -200,6 +355,12 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
 
     const detect = async () => {
       if (!videoRef.current || !canvasRef.current || isDetecting) {
+        animationId = requestAnimationFrame(detect);
+        return;
+      }
+
+      // Pause detection during snapshot display
+      if (isSnapshotActive) {
         animationId = requestAnimationFrame(detect);
         return;
       }
@@ -244,7 +405,6 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
             ctx.lineWidth = 2;
             ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-            // Draw emotion label
             const emotionKey = maxExpression[0] as EmotionType;
             const label = `${emotionEmojis[emotionKey]} ${emotionLabels[emotionKey]} (${Math.round(maxExpression[1] * 100)}%)`;
             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -267,14 +427,25 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         const dominant = getGroupDominantEmotion(emotions);
         setDominantEmotion(dominant);
 
-        // Use AI for message generation if configured, otherwise static
-        if (aiConfig && aiConfig.baseUrl && aiConfig.apiKey && aiConfig.modelName) {
-          generateAIMessage(emotions, faces.length, dominant);
-        } else {
-          const isGroup = faces.length > 1;
-          const message = getRandomMessage(dominant, isGroup);
-          setCurrentMessage(message);
-          currentMessageRef.current = message;
+        // Update face tracking
+        const faceIds = updateTracking(faces);
+
+        // Mode-specific behavior
+        if (mode === "snapshot") {
+          // Trigger snapshot if conditions are met
+          triggerSnapshot(faces, dominant, faceIds);
+        }
+
+        // Generate message (for contador mode or when snapshot not active)
+        if (mode === "contador") {
+          if (aiConfig && aiConfig.baseUrl && aiConfig.apiKey && aiConfig.modelName) {
+            generateAIMessage(emotions, faces.length, dominant);
+          } else {
+            const isGroup = faces.length > 1;
+            const message = getRandomMessage(dominant, isGroup);
+            setCurrentMessage(message);
+            currentMessageRef.current = message;
+          }
         }
 
         // Auto-save to database at intervals
@@ -294,6 +465,8 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         setDetectedFaces([]);
         setCurrentMessage("");
         setDominantEmotion(null);
+        // Update tracking with empty faces (handles reset logic)
+        updateTracking([]);
       }
 
       isDetecting = false;
@@ -305,7 +478,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isModelLoaded, eventName, saveCapture, aiConfig, generateAIMessage]);
+  }, [isModelLoaded, isSnapshotActive, eventName, mode, saveCapture, aiConfig, generateAIMessage, updateTracking, triggerSnapshot]);
 
   if (error) {
     return (
@@ -345,7 +518,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         </div>
       )}
 
-      {/* Video container - full width on mobile, max 2/3 of 1400px on desktop */}
+      {/* Video container */}
       <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full lg:max-w-[933px] lg:mx-auto">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
@@ -373,6 +546,35 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
           className="absolute top-0 left-0 w-full h-full pointer-events-none"
         />
 
+        {/* Snapshot overlay */}
+        {isSnapshotActive && snapshotImage && snapshotEmotion && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 animate-zoom-in">
+            <div className="w-[90%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20">
+              <img
+                src={snapshotImage}
+                alt="Snapshot capturado"
+                className="w-full object-cover max-h-[300px]"
+              />
+              <div
+                className="p-4 sm:p-6 text-center"
+                style={{
+                  background: `linear-gradient(135deg, ${getEmotionBg(snapshotEmotion)})`,
+                }}
+              >
+                <p className="text-2xl sm:text-3xl mb-2">
+                  {emotionEmojis[snapshotEmotion]}
+                </p>
+                <p className="text-white/90 text-sm sm:text-base italic leading-relaxed">
+                  &ldquo;{snapshotPoem}&rdquo;
+                </p>
+                <p className="text-white/60 text-xs mt-3">
+                  {emotionLabels[snapshotEmotion]}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Overlay info */}
         <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2">
           <p className="text-emerald-400 text-xs sm:text-sm font-medium">
@@ -390,8 +592,8 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         )}
       </div>
 
-      {/* Emotion message */}
-      {currentMessage && dominantEmotion && (
+      {/* Emotion message (Contador mode only) */}
+      {mode === "contador" && currentMessage && dominantEmotion && (
         <div
           className="rounded-xl p-4 sm:p-6 text-center shadow-lg transition-all duration-500 animate-fade-in w-full lg:max-w-[933px] lg:mx-auto border border-white/10"
           style={{
@@ -410,7 +612,7 @@ export default function FaceDetector({ eventName, aiConfig, onCapture }: Props) 
         </div>
       )}
 
-      {/* Detection panel - ALWAYS shown when faces are detected */}
+      {/* Detection panel */}
       {detectedFaces.length > 0 && (
         <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-700/50 w-full lg:max-w-[933px] lg:mx-auto">
           <h3 className="text-white font-semibold mb-3 text-xs sm:text-sm flex items-center gap-2">

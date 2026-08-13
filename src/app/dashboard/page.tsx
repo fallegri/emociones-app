@@ -16,7 +16,7 @@ import {
   Legend,
 } from "recharts";
 import { emotionLabels, emotionEmojis, emotionColors, EmotionType } from "@/lib/emotions";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 interface DashboardData {
   peakHours: { hour: number; totalPersons: number; captureCount: number }[];
@@ -59,6 +59,30 @@ export default function Dashboard() {
       setError("Error cargando datos del dashboard");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const exportCSV = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set("format", "csv");
+      if (selectedEvent) params.set("event", selectedEvent);
+
+      const res = await fetch(`/api/dashboard?${params.toString()}`);
+      if (!res.ok) throw new Error("Error exporting CSV");
+
+      const csvText = await res.text();
+      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `emociones_${selectedEvent || "todos"}_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exporting CSV:", err);
     }
   };
 
@@ -135,6 +159,14 @@ export default function Dashboard() {
                 ))}
               </select>
             )}
+            <button
+              onClick={exportCSV}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg shadow-indigo-600/20"
+              title="Exportar datos a CSV"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
             <Link
               href="/"
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg shadow-emerald-600/20"

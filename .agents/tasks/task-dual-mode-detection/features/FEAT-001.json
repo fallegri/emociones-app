@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add dual detection modes (Snapshot and Contador), face tracking/deduplication, live stats card, poem messages for snapshot mode, and CSV/Excel export from dashboard",
+  "status": "in_progress",
+  "steps": [
+    "1. Create src/lib/poems.ts - Define poem paragraphs mapped by EmotionType (one paragraph per emotion for snapshot messages). These replace static messages in snapshot mode. Include at least 3-4 poem excerpts per emotion in Spanish.",
+    "2. Update src/app/page.tsx - Add mode selection UI (Snapshot/Contador) between event name input and start button. Store mode in state ('snapshot' | 'contador'). Pass mode as prop to FaceDetector. Add a live stats card at the top of the detection area showing total unique persons counted (highlighted dashboard-style card with big number, emerald accent).",
+    "3. Refactor src/components/FaceDetector.tsx into dual-mode operation: A) SNAPSHOT MODE: When emotions are detected (for single person, immediately; for groups, when >=50% of detected faces have emotions with confidence >0.3), capture the video canvas as an image (toDataURL), show a zoom animation overlay with the captured photo + a poem paragraph matching the dominant emotion. After showing the snapshot for ~5 seconds, reset and continue detection. Use a 'snapshot shown' state to pause detection during display. Track faces to avoid re-snapshotting same people. B) CONTADOR MODE: Only count and register emotions. No photo capture. Show live count stats. Continue the existing DB save logic but no snapshot overlay. C) FACE TRACKING / DEDUPLICATION: Track faces by position proximity across frames. If a face bounding box overlaps significantly (>60% IoU or center distance <50% of box width) with a face from the previous frame, consider it the same person. Maintain a 'tracked persons' set. Only increment the unique person counter when a genuinely new face appears (not seen in tracking buffer). If all faces disappear for >3 seconds, reset tracking (next faces will be new). Store the deduplication state in refs. D) Pass the unique person count up to the parent via a new onPersonCount callback prop.",
+    "4. Update src/app/globals.css - Add CSS keyframes for the snapshot zoom animation (scale from 0.8 to 1.0 with fade-in, and a subtle pulse for the stats card).",
+    "5. Update src/app/dashboard/page.tsx - Add an 'Exportar' button (CSV export). Implement client-side CSV generation from the dashboard data (recentCaptures, stats). Create a downloadable CSV file with columns: Evento, Fecha, Hora, Personas, Emocion Dominante, Mensaje. Trigger download via a Blob URL. Style the button with the existing indigo accent pattern.",
+    "6. Update src/app/api/dashboard/route.ts - Add a 'format=csv' query parameter option that returns CSV text/csv response instead of JSON (server-side CSV for full dataset export, not just recent 20 captures - remove limit when format=csv)."
+  ],
+  "acceptance_criteria": [
+    "Mode selection (Snapshot/Contador) is visible and functional on the main page before starting detection",
+    "In Snapshot mode, a photo is captured and displayed with zoom animation when emotions are detected (>=50% threshold for groups)",
+    "Snapshot mode shows a poem paragraph matching the dominant emotion instead of the standard message",
+    "In Contador mode, only counting occurs - no photo overlay, live stats shown",
+    "Face deduplication prevents counting the same person multiple times while they remain in frame",
+    "A prominent stats card at the top shows the unique person count during detection",
+    "Dashboard has a functional CSV export button that downloads captured data",
+    "npm run build completes without errors"
+  ],
+  "verification": [
+    "Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
