@@ -92,7 +92,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400 mx-auto mb-4"></div>
           <p className="text-gray-300 text-sm">Cargando dashboard...</p>
@@ -103,12 +103,12 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-red-400 text-base sm:text-lg">{error}</p>
+          <p className="text-red-300 text-base sm:text-lg">{error}</p>
           <button
             onClick={() => { setError(null); fetchDashboard(); }}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all duration-200"
+            className="mt-4 px-5 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-400 transition-all duration-200 font-medium"
           >
             Reintentar
           </button>
@@ -131,15 +131,15 @@ export default function Dashboard() {
   })) || [];
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
-      <header className="border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-gray-700/60 bg-gray-900/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl">📊</span>
             <div>
-              <h1 className="text-base sm:text-xl font-bold text-white">Dashboard</h1>
-              <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">
+              <h1 className="text-base sm:text-xl font-bold text-white tracking-tight">Dashboard</h1>
+              <p className="text-[10px] sm:text-xs text-gray-300 hidden sm:block">
                 Analisis y metricas en tiempo real
               </p>
             </div>
@@ -149,7 +149,7 @@ export default function Dashboard() {
               <select
                 value={selectedEvent}
                 onChange={(e) => setSelectedEvent(e.target.value)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500/50 max-w-[140px] sm:max-w-none"
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-800/70 border border-gray-500/50 rounded-lg text-white text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-400/50 max-w-[140px] sm:max-w-none"
               >
                 <option value="">Todos</option>
                 {data.events.map((ev) => (
@@ -161,7 +161,7 @@ export default function Dashboard() {
             )}
             <button
               onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg shadow-indigo-600/20"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-400 transition-all duration-200 text-xs sm:text-sm font-semibold shadow-lg shadow-indigo-500/25"
               title="Exportar datos a CSV"
             >
               <Download size={14} />
@@ -169,7 +169,7 @@ export default function Dashboard() {
             </button>
             <Link
               href="/"
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg shadow-emerald-600/20"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-emerald-500 text-gray-900 rounded-lg hover:bg-emerald-400 transition-all duration-200 text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/25"
             >
               <ArrowLeft size={14} className="hidden sm:block" />
               <span>🎭</span>
@@ -182,21 +182,21 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Stats cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200">
-            <p className="text-gray-400 text-xs sm:text-sm">Total Capturas</p>
+          <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40 hover:border-gray-500/50 transition-all duration-200">
+            <p className="text-gray-300 text-xs sm:text-sm font-medium">Total Capturas</p>
             <p className="text-2xl sm:text-3xl font-bold text-white mt-1">
               {data?.stats.totalCaptures || 0}
             </p>
           </div>
-          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200">
-            <p className="text-gray-400 text-xs sm:text-sm">Total Personas</p>
-            <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-1">
+          <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40 hover:border-emerald-500/30 transition-all duration-200">
+            <p className="text-gray-300 text-xs sm:text-sm font-medium">Total Personas</p>
+            <p className="text-2xl sm:text-3xl font-bold text-emerald-300 mt-1">
               {data?.stats.totalPersons || 0}
             </p>
           </div>
-          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200">
-            <p className="text-gray-400 text-xs sm:text-sm">Promedio/Captura</p>
-            <p className="text-2xl sm:text-3xl font-bold text-indigo-400 mt-1">
+          <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40 hover:border-indigo-500/30 transition-all duration-200">
+            <p className="text-gray-300 text-xs sm:text-sm font-medium">Promedio/Captura</p>
+            <p className="text-2xl sm:text-3xl font-bold text-indigo-300 mt-1">
               {data?.stats.avgPersonsPerCapture || 0}
             </p>
           </div>
@@ -205,7 +205,7 @@ export default function Dashboard() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Peak Hours Chart */}
-          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50">
+          <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40">
             <h3 className="text-sm sm:text-lg font-bold text-white mb-4">
               📈 Picos de Afluencia por Hora
             </h3>
@@ -229,14 +229,14 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-gray-400">
                 <p className="text-sm text-center px-4">Sin datos aun. Inicia una deteccion para ver estadisticas.</p>
               </div>
             )}
           </div>
 
           {/* Emotion Distribution */}
-          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50">
+          <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40">
             <h3 className="text-sm sm:text-lg font-bold text-white mb-4">
               🎭 Distribucion de Emociones
             </h3>
@@ -275,7 +275,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-gray-400">
                 <p className="text-sm text-center px-4">Sin datos de emociones aun.</p>
               </div>
             )}
@@ -283,7 +283,7 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Captures */}
-        <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50">
+        <div className="bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-600/40">
           <h3 className="text-sm sm:text-lg font-bold text-white mb-4">
             🕐 Capturas Recientes
           </h3>
@@ -293,19 +293,19 @@ export default function Dashboard() {
               <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-700/50">
-                      <th className="text-left py-3 px-2 text-gray-400 font-medium text-xs">Evento</th>
-                      <th className="text-left py-3 px-2 text-gray-400 font-medium text-xs">Fecha/Hora</th>
-                      <th className="text-center py-3 px-2 text-gray-400 font-medium text-xs">Personas</th>
-                      <th className="text-center py-3 px-2 text-gray-400 font-medium text-xs">Emocion</th>
-                      <th className="text-left py-3 px-2 text-gray-400 font-medium text-xs">Mensaje</th>
+                    <tr className="border-b border-gray-600/50">
+                      <th className="text-left py-3 px-2 text-gray-200 font-medium text-xs">Evento</th>
+                      <th className="text-left py-3 px-2 text-gray-200 font-medium text-xs">Fecha/Hora</th>
+                      <th className="text-center py-3 px-2 text-gray-200 font-medium text-xs">Personas</th>
+                      <th className="text-center py-3 px-2 text-gray-200 font-medium text-xs">Emocion</th>
+                      <th className="text-left py-3 px-2 text-gray-200 font-medium text-xs">Mensaje</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.recentCaptures.map((capture) => (
                       <tr key={capture.id} className="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors duration-150">
                         <td className="py-3 px-2 text-white text-sm">{capture.eventName}</td>
-                        <td className="py-3 px-2 text-gray-300 text-sm">
+                        <td className="py-3 px-2 text-gray-200 text-sm">
                           {new Date(capture.capturedAt).toLocaleString("es-ES", {
                             day: "2-digit",
                             month: "short",
@@ -313,13 +313,13 @@ export default function Dashboard() {
                             minute: "2-digit",
                           })}
                         </td>
-                        <td className="py-3 px-2 text-center text-emerald-400 font-bold">
+                        <td className="py-3 px-2 text-center text-emerald-300 font-bold">
                           {capture.personCount}
                         </td>
                         <td className="py-3 px-2 text-center text-xl">
                           {emotionEmojis[capture.dominantEmotion as EmotionType] || "?"}
                         </td>
-                        <td className="py-3 px-2 text-gray-300 max-w-xs truncate text-sm">
+                        <td className="py-3 px-2 text-gray-200 max-w-xs truncate text-sm">
                           {capture.message}
                         </td>
                       </tr>
@@ -357,9 +357,9 @@ export default function Dashboard() {
               </div>
             </>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-400">
               <p className="text-sm">No hay capturas registradas aun.</p>
-              <Link href="/" className="text-emerald-400 hover:text-emerald-300 mt-2 inline-block text-sm transition-colors">
+              <Link href="/" className="text-emerald-300 hover:text-emerald-200 mt-2 inline-block text-sm font-medium transition-colors">
                 Ir al detector →
               </Link>
             </div>

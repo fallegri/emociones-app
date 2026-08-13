@@ -164,21 +164,21 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
       {/* Header */}
-      <header className="border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-gray-700/60 bg-gray-900/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors duration-200 group"
+              className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors duration-200 group"
             >
               <ArrowLeft size={20} className="group-hover:-translate-x-0.5 transition-transform duration-200" />
               <span className="text-sm font-medium hidden sm:inline">Volver al Detector</span>
             </Link>
           </div>
           <div className="flex items-center gap-2">
-            <Cpu size={20} className="text-indigo-400" />
+            <Cpu size={20} className="text-indigo-300" />
             <h1 className="text-lg font-bold text-white">Configuracion</h1>
           </div>
           <div className="w-[120px] hidden sm:block" />
@@ -191,14 +191,14 @@ export default function SettingsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Proveedor de IA
           </h2>
-          <p className="text-gray-400 text-sm sm:text-base">
+          <p className="text-gray-300 text-sm sm:text-base">
             Selecciona tu proveedor y solo ingresa tu API Key. La URL y modelo se configuran automaticamente.
           </p>
         </div>
 
         {/* Step 1: Provider Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-3">
+          <label className="block text-sm font-medium text-gray-200 mb-3">
             1. Selecciona tu proveedor
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -212,12 +212,12 @@ export default function SettingsPage() {
                   onClick={() => handleProviderSelect(p)}
                   className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-center ${
                     isSelected
-                      ? "border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/10"
-                      : "border-gray-700/50 bg-gray-800/50 hover:border-gray-600/70 hover:bg-gray-800/70"
+                      ? "border-indigo-400 bg-indigo-500/15 shadow-lg shadow-indigo-500/10"
+                      : "border-gray-600/50 bg-gray-800/60 hover:border-gray-500/70 hover:bg-gray-800/80"
                   }`}
                 >
                   <div className="text-2xl mb-2">{defaults.icon}</div>
-                  <p className={`text-xs font-medium ${isSelected ? "text-indigo-300" : "text-gray-400"}`}>
+                  <p className={`text-xs font-medium ${isSelected ? "text-indigo-200" : "text-gray-300"}`}>
                     {defaults.label}
                   </p>
                   {isSelected && (
@@ -231,15 +231,15 @@ export default function SettingsPage() {
 
         {/* Step 2: API Key (shown after provider selection) */}
         {provider && (
-          <div className="bg-gray-800/60 rounded-2xl border border-gray-700/50 shadow-xl overflow-hidden">
+          <div className="bg-gray-800/70 rounded-2xl border border-gray-600/40 shadow-xl overflow-hidden">
             <div className="p-6 sm:p-8 space-y-6">
               {/* Provider info */}
               {provider !== "custom" && (
-                <div className="flex items-center gap-3 p-3 bg-gray-900/40 rounded-xl border border-gray-700/30">
+                <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-xl border border-gray-600/30">
                   <span className="text-xl">{PROVIDER_DEFAULTS[provider].icon}</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white">{PROVIDER_DEFAULTS[provider].label}</p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-gray-400 truncate">
                       {PROVIDER_DEFAULTS[provider].baseUrl} &middot; {PROVIDER_DEFAULTS[provider].modelName}
                     </p>
                   </div>
@@ -248,11 +248,11 @@ export default function SettingsPage() {
 
               {/* API Key - Primary field */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
-                  <Key size={16} className="text-amber-400" />
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-200">
+                  <Key size={16} className="text-amber-300" />
                   2. Ingresa tu API Key
                   {provider === "ollama" && (
-                    <span className="text-xs text-gray-500 font-normal">(opcional para Ollama local)</span>
+                    <span className="text-xs text-gray-400 font-normal">(opcional para Ollama local)</span>
                   )}
                 </label>
                 <input
@@ -270,7 +270,7 @@ export default function SettingsPage() {
                   }
                   className="w-full px-4 py-3 bg-gray-900/60 border border-gray-600/50 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all duration-200 text-sm"
                 />
-                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                <p className="text-xs text-gray-400 flex items-center gap-1.5">
                   <Shield size={12} />
                   Se almacena localmente en tu navegador. No se envia a ningun servidor externo.
                 </p>
@@ -314,18 +314,18 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-200 transition-colors"
                   >
                     {showAdvanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     Configuracion avanzada (URL y Modelo)
                   </button>
 
                   {showAdvanced && (
-                    <div className="mt-4 space-y-4 p-4 bg-gray-900/30 rounded-xl border border-gray-700/30">
+                    <div className="mt-4 space-y-4 p-4 bg-gray-900/40 rounded-xl border border-gray-600/30">
                       {/* Base URL */}
                       <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-medium text-gray-400">
-                          <Globe size={14} className="text-indigo-400" />
+                        <label className="flex items-center gap-2 text-xs font-medium text-gray-300">
+                          <Globe size={14} className="text-indigo-300" />
                           URL Base
                         </label>
                         <input
@@ -339,8 +339,8 @@ export default function SettingsPage() {
 
                       {/* Model Name */}
                       <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-medium text-gray-400">
-                          <Cpu size={14} className="text-emerald-400" />
+                        <label className="flex items-center gap-2 text-xs font-medium text-gray-300">
+                          <Cpu size={14} className="text-emerald-300" />
                           Modelo
                         </label>
                         <input
@@ -384,10 +384,10 @@ export default function SettingsPage() {
             </div>
 
             {/* Footer Actions */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-6 sm:p-8 border-t border-gray-700/50 bg-gray-900/30">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-6 sm:p-8 border-t border-gray-600/40 bg-gray-900/40">
               <button
                 onClick={handleClear}
-                className="px-4 py-2.5 text-sm text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all duration-200 order-3 sm:order-1"
+                className="px-4 py-2.5 text-sm text-gray-300 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-all duration-200 order-3 sm:order-1"
               >
                 Limpiar configuracion
               </button>
@@ -395,7 +395,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleValidate}
                   disabled={validating || !canValidate()}
-                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40"
+                  className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl hover:bg-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
                 >
                   {validating ? (
                     <span className="flex items-center gap-2 justify-center">
@@ -408,7 +408,7 @@ export default function SettingsPage() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition-all duration-200 text-sm font-medium shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/40"
+                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-400 text-gray-900 rounded-xl hover:from-emerald-400 hover:to-emerald-300 transition-all duration-200 text-sm font-bold shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/40"
                 >
                   Guardar
                 </button>
@@ -418,19 +418,19 @@ export default function SettingsPage() {
         )}
 
         {/* Info section */}
-        <div className="mt-8 p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/30">
-          <h3 className="text-sm font-medium text-gray-300 mb-3">Como funciona</h3>
-          <ul className="space-y-2 text-xs text-gray-500">
+        <div className="mt-8 p-4 sm:p-6 bg-gray-800/40 rounded-xl border border-gray-600/30">
+          <h3 className="text-sm font-medium text-gray-200 mb-3">Como funciona</h3>
+          <ul className="space-y-2 text-xs text-gray-400">
             <li className="flex items-start gap-2">
-              <span className="text-indigo-400 mt-0.5">1.</span>
+              <span className="text-indigo-300 mt-0.5">1.</span>
               Selecciona tu proveedor de IA (NVIDIA NIM, OpenAI, Ollama o Custom)
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-indigo-400 mt-0.5">2.</span>
+              <span className="text-indigo-300 mt-0.5">2.</span>
               Ingresa solo tu API Key (la URL y modelo se configuran automaticamente)
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-indigo-400 mt-0.5">3.</span>
+              <span className="text-indigo-300 mt-0.5">3.</span>
               Valida la conexion y guarda. El detector generara mensajes contextuales con IA.
             </li>
           </ul>
