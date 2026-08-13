@@ -672,41 +672,26 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         )}
       </div>
 
-      {/* Emotion message removed from contador mode - messages are only shown via snapshot overlay */}
-
-      {/* Detection panel */}
-      {detectedFaces.length > 0 && (
-        <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-gray-700/50 w-full lg:max-w-[933px] lg:mx-auto">
-          <h3 className="text-white font-semibold mb-3 text-xs sm:text-sm flex items-center gap-2">
-            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            Personas detectadas: {detectedFaces.length}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-            {detectedFaces.map((face, i) => {
-              const faceId = currentFaceIds[i];
-              const emotionColor = getEmotionAccentColor(face.emotion);
-              return (
-                <div
-                  key={faceId || i}
-                  className="bg-gray-900/80 rounded-lg p-2.5 sm:p-3 text-center border-l-4 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200"
-                  style={{ borderLeftColor: emotionColor }}
-                >
-                  <p className="text-xl sm:text-2xl">{emotionEmojis[face.emotion]}</p>
-                  <p className="text-white text-[10px] sm:text-xs mt-1 font-bold tracking-wide">
-                    {faceId ? `per${faceId}` : `Persona ${i + 1}`}
-                  </p>
-                  <p className="text-white/80 text-[10px] sm:text-xs font-medium">
-                    {emotionLabels[face.emotion]}
-                  </p>
-                  <p className="text-emerald-300 text-[10px] font-semibold">
-                    {Math.round(face.confidence * 100)}%
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+      {/* Detection LED indicator - green blink when detecting faces */}
+      <div className="flex items-center justify-center w-full lg:max-w-[933px] lg:mx-auto">
+        <div className="flex items-center gap-2">
+          <span
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              detectedFaces.length > 0
+                ? "bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse"
+                : "bg-gray-600"
+            }`}
+          />
+          <span className={`text-xs font-medium ${
+            detectedFaces.length > 0 ? "text-emerald-400" : "text-gray-500"
+          }`}>
+            {detectedFaces.length > 0
+              ? `Detectando ${detectedFaces.length} ${detectedFaces.length === 1 ? "persona" : "personas"}`
+              : "Sin deteccion"
+            }
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }
