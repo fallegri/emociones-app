@@ -68,6 +68,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const [snapshotPoem, setSnapshotPoem] = useState<string>("");
   const [snapshotEmotion, setSnapshotEmotion] = useState<EmotionType | null>(null);
   const [isSnapshotActive, setIsSnapshotActive] = useState(false);
+  const isSnapshotActiveRef = useRef(false);
   const [compositedImage, setCompositedImage] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -450,26 +451,33 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     // If faces are detected by SsdMobilenetv1 (minConfidence: 0.3), they are real - just trigger
     if (faces.length === 0) return;
 
+    // Ensure video has valid dimensions before capturing
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
+
     const image = captureVideoSnapshot();
     if (!image) return;
 
     const poem = getRandomPoem(dominant);
+
+    // Mark these faces as snapshot-shown ONLY after successful capture
+    faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
+
+    // Set state to show popup
     setSnapshotImage(image);
     setSnapshotPoem(poem);
     setSnapshotEmotion(dominant);
     setIsSnapshotActive(true);
+    isSnapshotActiveRef.current = true;
 
-    // Composite the image with overlay
+    // Composite the image with overlay (async, updates when ready)
     compositeSnapshot(image, dominant, poem).then((composited) => {
       if (composited) {
         setCompositedImage(composited);
       }
     });
 
-    // Mark these faces as snapshot-shown
-    faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
-
-    // Save snapshot capture to database (including the image)
+    // Save snapshot capture to database
     const emotions = faces.map((f) => f.emotion);
     const captureData: CaptureData = {
       eventName,
@@ -484,6 +492,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     // Auto-dismiss after SNAPSHOT_DISPLAY_MS
     setTimeout(() => {
       setIsSnapshotActive(false);
+      isSnapshotActiveRef.current = false;
       setSnapshotImage(null);
       setSnapshotPoem("");
       setSnapshotEmotion(null);
@@ -566,7 +575,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
       // Only draw on canvas when snapshot is not active
-      const ctx = !isSnapshotActive ? canvas.getContext("2d") : null;
+      const ctx = !isSnapshotActiveRef.current ? canvas.getContext("2d") : null;
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
@@ -644,7 +653,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         }
 
         // Mode-specific behavior
-        if (mode === "snapshot" && !isSnapshotActive) {
+        if (mode === "snapshot" && !isSnapshotActiveRef.current) {
           // Trigger snapshot if conditions are met
           triggerSnapshot(faces, dominant, faceIds);
         }
@@ -707,7 +716,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [isModelLoaded, isSnapshotActive, eventName, mode, saveCapture, aiConfig, generateAIMessage, updateTracking, triggerSnapshot]);
+  }, [isModelLoaded, eventName, mode, saveCapture, aiConfig, generateAIMessage, updateTracking, triggerSnapshot]);
 
   if (error) {
     return (
@@ -826,6 +835,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
               <button
                 onClick={() => {
                   setIsSnapshotActive(false);
+                  isSnapshotActiveRef.current = false;
                   setSnapshotImage(null);
                   setSnapshotPoem("");
                   setSnapshotEmotion(null);
