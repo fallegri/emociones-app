@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
 import * as faceapi from "face-api.js";
 import { EmotionType, emotionLabels, emotionEmojis, getRandomMessage, getGroupDominantEmotion } from "@/lib/emotions";
 import { getRandomPoem } from "@/lib/poems";
@@ -70,7 +69,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const [isSnapshotActive, setIsSnapshotActive] = useState(false);
   const isSnapshotActiveRef = useRef(false);
   const [compositedImage, setCompositedImage] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
@@ -106,11 +104,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const FACE_DISAPPEAR_RESET_MS = 3000;
   const SNAPSHOT_DISPLAY_MS = 10000;
   const SNAPSHOT_STABILIZATION_MS = 1500; // Wait after mode switch before triggering snapshot
-
-  // Track client-side mount for portal rendering
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Reset snapshot tracking when switching to snapshot mode so current faces can trigger it
   const prevModeRef = useRef<string>(mode);
@@ -925,9 +918,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         )}
       </div>
 
-      {/* Full-screen snapshot popup modal - rendered via portal to escape overflow/transform contexts */}
-      {isMounted && isSnapshotActive && snapshotEmotion && snapshotImage && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4" style={{ margin: 0 }}>
+      {/* Snapshot popup - NO portal, just high z-index (this worked in ac7ac56) */}
+      {isSnapshotActive && snapshotImage && snapshotEmotion && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4">
           <div className="w-full max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center bg-gray-900">
             <img
               src={compositedImage || snapshotImage}
@@ -963,8 +956,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
               </button>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
