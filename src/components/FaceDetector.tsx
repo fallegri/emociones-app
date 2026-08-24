@@ -179,15 +179,23 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           existingTracks.forEach((track) => track.stop());
         }
 
-        const constraints: MediaStreamConstraints = {
-          video: {
-            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-            width: { ideal: res.width, min: 320 },
-            height: { ideal: res.height, min: 240 },
-          },
-        };
+        let stream: MediaStream;
+        try {
+          // Try with exact deviceId first
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: selectedDeviceId },
+              width: { ideal: res.width },
+              height: { ideal: res.height },
+            },
+          });
+        } catch {
+          // Fallback: try without resolution constraints
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: selectedDeviceId } },
+          });
+        }
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -793,24 +801,27 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       </div>
 
       {/* Full-screen snapshot popup modal - rendered via portal to escape overflow/transform contexts */}
-      {isMounted && isSnapshotActive && compositedImage && snapshotEmotion && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-zoom-in">
-          <div className="w-[92%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
+      {isMounted && isSnapshotActive && snapshotEmotion && snapshotImage && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4" style={{ margin: 0 }}>
+          <div className="w-full max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center bg-gray-900">
             <img
-              src={compositedImage}
+              src={compositedImage || snapshotImage}
               alt="Snapshot con poema"
-              className="w-full object-contain rounded-t-xl"
+              className="w-full object-contain max-h-[60vh]"
             />
-            <div className="w-full p-3 sm:p-4 bg-gray-900/95 flex items-center justify-center gap-3">
+            {!compositedImage && snapshotPoem && (
+              <div className="w-full p-3 text-center bg-gray-800">
+                <p className="text-white text-sm italic">&ldquo;{snapshotPoem}&rdquo;</p>
+                <p className="text-gray-400 text-xs mt-1">{emotionEmojis[snapshotEmotion]} {emotionLabels[snapshotEmotion]}</p>
+              </div>
+            )}
+            <div className="w-full p-3 bg-gray-900 flex items-center justify-center gap-3">
               <a
-                href={compositedImage}
+                href={compositedImage || snapshotImage}
                 download={`emotionai-${snapshotEmotion}-${Date.now()}.jpg`}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-all duration-200 text-sm sm:text-base flex items-center gap-2"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-all text-sm flex items-center gap-2"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                Descargar imagen
+                ⬇️ Descargar
               </a>
               <button
                 onClick={() => {
@@ -820,9 +831,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
                   setSnapshotEmotion(null);
                   setCompositedImage(null);
                 }}
-                className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-lg transition-all duration-200 text-sm"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-lg transition-all text-sm"
               >
-                Cerrar
+                ✕ Cerrar
               </button>
             </div>
           </div>
