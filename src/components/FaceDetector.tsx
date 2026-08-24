@@ -172,9 +172,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
         const constraints: MediaStreamConstraints = {
           video: {
-            deviceId: selectedDeviceId ? { ideal: selectedDeviceId } : undefined,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 },
           },
         };
 
