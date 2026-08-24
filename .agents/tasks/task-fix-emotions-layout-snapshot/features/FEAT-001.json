@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "fix",
   "description": "Fix emotion detection always returning 'happy', fix camera layout proportions, implement canvas-based downloadable snapshot, and replace poems with Bolivian eastern region poetry",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "STEP 1 - Download face_landmark_68 model: Update scripts/download-models.sh to also download face_landmark_68_model-weights_manifest.json, face_landmark_68_model-shard1. Then run the script to download the model to public/models/.",
     "STEP 2 - Fix emotion detection in src/components/FaceDetector.tsx: (a) Load faceapi.nets.faceLandmark68Net alongside the other models. (b) Add .withFaceLandmarks() in the detection pipeline between detectAllFaces and withFaceExpressions. (c) Add a minimum confidence threshold (0.4) - if the max expression confidence is below this threshold, default to 'neutral' instead of whatever has the tiny highest value. This prevents the model from always defaulting to 'happy' when confidence is low.",
@@ -30,5 +30,5 @@
     "Verify poems.ts contains Bolivian eastern region poetry references (camba, Santa Cruz, llanos, etc.)"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 5 steps completed successfully. Build passes with Next.js 16.3.0 Turbopack. The getEmotionAccentColor helper function remains in FaceDetector.tsx (unused but harmless - TypeScript does not flag it). The compositeSnapshot function uses a Promise-based Image loading pattern for canvas compositing on the client side."
 }
