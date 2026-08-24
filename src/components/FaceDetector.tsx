@@ -423,14 +423,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     const allShown = faceIds.every((id) => snapshotShownForFacesRef.current.has(id));
     if (allShown && faceIds.length > 0) return;
 
-    // For groups: check if at least 50% have confidence > 0.15
-    if (faces.length > 1) {
-      const confidentFaces = faces.filter((f) => f.confidence > 0.15);
-      if (confidentFaces.length < faces.length * 0.5) return;
-    } else if (faces.length === 1) {
-      // Single face must also meet minimum confidence threshold
-      if (faces[0].confidence <= 0.15) return;
-    }
+    // If faces are detected by SsdMobilenetv1 (minConfidence: 0.3), they are real - just trigger
+    if (faces.length === 0) return;
 
     const image = captureVideoSnapshot();
     if (!image) return;
@@ -708,17 +702,14 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-2">
       {/* Camera selector */}
       {videoDevices.length > 1 && (
-        <div className="w-full lg:max-w-[933px] lg:mx-auto">
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
-            Camara
-          </label>
+        <div className="w-full">
           <select
             value={selectedDeviceId}
             onChange={(e) => setSelectedDeviceId(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 bg-gray-800/80 border border-gray-700/50 rounded-lg text-sm text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
+            className="w-full sm:w-auto px-3 py-1.5 bg-gray-800/80 border border-gray-700/50 rounded-lg text-xs text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
           >
             {videoDevices.map((device, index) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -730,7 +721,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       )}
 
       {/* Video container */}
-      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full lg:max-w-[933px] lg:mx-auto">
+      <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full max-h-[60vh]">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
             <div className="text-center">
@@ -744,7 +735,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           autoPlay
           muted
           playsInline
-          className="w-full object-contain"
+          className="w-full max-h-[60vh] object-contain"
           onLoadedMetadata={() => {
             if (canvasRef.current && videoRef.current) {
               canvasRef.current.width = videoRef.current.videoWidth;
@@ -757,30 +748,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           className="absolute top-0 left-0 w-full h-full pointer-events-none"
         />
 
-        {/* Snapshot overlay - canvas composited image with download */}
-        {isSnapshotActive && compositedImage && snapshotEmotion && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 animate-zoom-in">
-            <div className="w-[90%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
-              <img
-                src={compositedImage}
-                alt="Snapshot con poema"
-                className="w-full object-contain rounded-t-xl"
-              />
-              <div className="w-full p-3 sm:p-4 bg-gray-900/95 flex justify-center">
-                <a
-                  href={compositedImage}
-                  download={`emotionai-${snapshotEmotion}-${Date.now()}.jpg`}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-all duration-200 text-sm sm:text-base flex items-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Descargar imagen
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Snapshot overlay removed from here - now shown as full-screen popup below */}
 
         {/* Overlay info */}
         <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-black/60 backdrop-blur-sm rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2">
@@ -799,26 +767,42 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         )}
       </div>
 
-      {/* Detection LED indicator - green blink when detecting faces */}
-      <div className="flex items-center justify-center w-full lg:max-w-[933px] lg:mx-auto">
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              detectedFaces.length > 0
-                ? "bg-emerald-400 shadow-lg shadow-emerald-400/50 animate-pulse"
-                : "bg-gray-600"
-            }`}
-          />
-          <span className={`text-xs font-medium ${
-            detectedFaces.length > 0 ? "text-emerald-400" : "text-gray-500"
-          }`}>
-            {detectedFaces.length > 0
-              ? `Detectando ${detectedFaces.length} ${detectedFaces.length === 1 ? "persona" : "personas"}`
-              : "Sin deteccion"
-            }
-          </span>
+      {/* Full-screen snapshot popup modal */}
+      {isSnapshotActive && compositedImage && snapshotEmotion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm animate-zoom-in">
+          <div className="w-[92%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
+            <img
+              src={compositedImage}
+              alt="Snapshot con poema"
+              className="w-full object-contain rounded-t-xl"
+            />
+            <div className="w-full p-3 sm:p-4 bg-gray-900/95 flex items-center justify-center gap-3">
+              <a
+                href={compositedImage}
+                download={`emotionai-${snapshotEmotion}-${Date.now()}.jpg`}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-all duration-200 text-sm sm:text-base flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                Descargar imagen
+              </a>
+              <button
+                onClick={() => {
+                  setIsSnapshotActive(false);
+                  setSnapshotImage(null);
+                  setSnapshotPoem("");
+                  setSnapshotEmotion(null);
+                  setCompositedImage(null);
+                }}
+                className="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium rounded-lg transition-all duration-200 text-sm"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

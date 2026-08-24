@@ -208,138 +208,87 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          /* Step 3: Active detection with mode toggle at bottom */
-          <div className="space-y-4 sm:space-y-6 animate-fade-in">
-            {/* Live stats card - Person count prominent at top */}
-            <div className="bg-gradient-to-r from-emerald-900/50 to-emerald-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-emerald-400/30 shadow-lg shadow-emerald-900/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-500/20 rounded-xl flex items-center justify-center border border-emerald-400/20">
-                    <Users className="text-emerald-300" size={28} />
-                  </div>
-                  <div>
-                    <p className="text-emerald-300 text-xs sm:text-sm font-medium">Personas Detectadas</p>
-                    <p className="text-4xl sm:text-5xl font-bold text-white">{personCount}</p>
-                  </div>
-                </div>
-                <div className="text-right space-y-2">
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-400 transition-all duration-200 text-xs font-semibold shadow-md shadow-indigo-500/20"
-                  >
-                    <BarChart3 size={14} />
-                    Dashboard
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Mode indicator banner */}
-            <div
-              className={`rounded-xl p-3 sm:p-4 border-2 flex items-center gap-3 animate-mode-pulse ${
-                mode === "contador"
-                  ? "bg-indigo-950/60 border-indigo-400/50"
-                  : "bg-emerald-950/60 border-emerald-400/50"
-              }`}
-            >
-              <div
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center ${
-                  mode === "contador" ? "bg-indigo-500/20" : "bg-emerald-500/20"
+          /* Step 3: Active detection - compact single-screen layout */
+          <div className="flex flex-col h-[calc(100vh-80px)] animate-fade-in">
+            {/* TOP BAR: compact row with mode badge + person count + event name + stop button */}
+            <div className="flex items-center gap-2 sm:gap-3 px-1 py-2">
+              {/* Mode badge - small colored pill */}
+              <span
+                className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold border ${
+                  mode === "contador"
+                    ? "bg-indigo-500/15 text-indigo-300 border-indigo-400/40"
+                    : "bg-emerald-500/15 text-emerald-300 border-emerald-400/40"
                 }`}
               >
                 {mode === "contador" ? (
-                  <Users className="text-indigo-300" size={22} />
+                  <><Users size={12} /> Contador</>
                 ) : (
-                  <Camera className="text-emerald-300" size={22} />
+                  <><Camera size={12} /> Snapshot</>
                 )}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full animate-pulse ${
-                      mode === "contador" ? "bg-indigo-400" : "bg-emerald-400"
-                    }`}
-                  />
-                  <p
-                    className={`text-sm sm:text-base font-bold tracking-wide ${
-                      mode === "contador" ? "text-indigo-200" : "text-emerald-200"
-                    }`}
-                  >
-                    {mode === "contador"
-                      ? "MODO CONTADOR - Rastreo por persona"
-                      : "MODO SNAPSHOT - Captura + Poema"}
-                  </p>
-                </div>
-                <p className="text-xs text-gray-300 mt-0.5">
-                  {mode === "contador"
-                    ? "Seguimiento individual de emociones por persona"
-                    : "Captura automatica con poema al detectar rostros"}
-                </p>
-              </div>
-            </div>
+              </span>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-white truncate">
-                  📍 {eventName}
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-300">
-                  Deteccion en tiempo real activa
-                </p>
-              </div>
+              {/* Person count inline */}
+              <span className="shrink-0 text-xs sm:text-sm text-white font-bold">
+                👥 {personCount}
+              </span>
+
+              {/* Event name */}
+              <span className="text-xs sm:text-sm text-gray-300 truncate min-w-0">
+                📍 {eventName}
+              </span>
+
+              {/* Stop button */}
               <button
                 onClick={() => {
                   setIsStarted(false);
                   setCaptureCount(0);
                   setPersonCount(0);
                 }}
-                className="shrink-0 px-3 sm:px-4 py-2 bg-red-500/15 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/25 hover:text-red-200 transition-all duration-200 text-xs sm:text-sm font-medium"
+                className="shrink-0 ml-auto px-2.5 py-1 bg-red-500/15 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/25 hover:text-red-200 transition-all duration-200 text-xs font-medium"
               >
                 ⏹ Detener
               </button>
             </div>
 
-            <FaceDetector
-              eventName={eventName}
-              aiConfig={aiConfig ? getEffectiveConfig(aiConfig) : null}
-              mode={mode}
-              onCapture={() => setCaptureCount((c) => c + 1)}
-              onPersonCount={handlePersonCount}
-            />
+            {/* MIDDLE: Camera video (takes remaining space) */}
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <div className="w-full h-full max-h-[60vh]">
+                <FaceDetector
+                  eventName={eventName}
+                  aiConfig={aiConfig ? getEffectiveConfig(aiConfig) : null}
+                  mode={mode}
+                  onCapture={() => setCaptureCount((c) => c + 1)}
+                  onPersonCount={handlePersonCount}
+                />
+              </div>
+            </div>
 
-            {/* Mode toggle at BOTTOM */}
-            <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-600/40 w-full lg:max-w-[933px] lg:mx-auto">
-              <p className="text-xs text-gray-300 text-center mb-3 font-medium">Modo de Deteccion</p>
-              <div className="grid grid-cols-2 gap-3">
+            {/* BOTTOM: Compact mode toggle - two small buttons side by side */}
+            <div className="py-2 px-1">
+              <div className="flex gap-2 w-full max-w-sm mx-auto">
                 <button
                   type="button"
                   onClick={() => setMode("contador")}
-                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border transition-all duration-200 text-xs sm:text-sm font-medium ${
                     mode === "contador"
-                      ? "border-indigo-400 bg-indigo-500/15 text-indigo-300 shadow-lg shadow-indigo-500/10"
-                      : "border-gray-600/50 bg-gray-900/40 text-gray-300 hover:border-gray-500/60 hover:text-gray-200"
+                      ? "border-indigo-400 bg-indigo-500/15 text-indigo-300"
+                      : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/60 hover:text-gray-300"
                   }`}
                 >
-                  <Users size={20} />
-                  <div className="text-left">
-                    <span className="text-sm font-medium block">Contador</span>
-                    <span className="text-[10px] text-gray-400">Solo conteo</span>
-                  </div>
+                  <Users size={14} />
+                  Contador
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode("snapshot")}
-                  className={`flex items-center justify-center gap-2 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border transition-all duration-200 text-xs sm:text-sm font-medium ${
                     mode === "snapshot"
-                      ? "border-emerald-400 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-500/10"
-                      : "border-gray-600/50 bg-gray-900/40 text-gray-300 hover:border-gray-500/60 hover:text-gray-200"
+                      ? "border-emerald-400 bg-emerald-500/15 text-emerald-300"
+                      : "border-gray-600/50 bg-gray-900/40 text-gray-400 hover:border-gray-500/60 hover:text-gray-300"
                   }`}
                 >
-                  <Camera size={20} />
-                  <div className="text-left">
-                    <span className="text-sm font-medium block">Snapshot</span>
-                    <span className="text-[10px] text-gray-400">Captura + Poema</span>
-                  </div>
+                  <Camera size={14} />
+                  Snapshot
                 </button>
               </div>
             </div>
