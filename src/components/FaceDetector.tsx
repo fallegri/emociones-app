@@ -68,6 +68,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const [snapshotEmotion, setSnapshotEmotion] = useState<EmotionType | null>(null);
   const [isSnapshotActive, setIsSnapshotActive] = useState(false);
   const [compositedImage, setCompositedImage] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
@@ -93,6 +94,11 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const FACE_DISAPPEAR_RESET_MS = 3000;
   const SNAPSHOT_DISPLAY_MS = 10000;
   const SNAPSHOT_STABILIZATION_MS = 1500; // Wait after mode switch before triggering snapshot
+
+  // Track client-side mount for portal rendering
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Reset snapshot tracking when switching to snapshot mode so current faces can trigger it
   const prevModeRef = useRef<string>(mode);
@@ -166,7 +172,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
         const constraints: MediaStreamConstraints = {
           video: {
-            deviceId: { exact: selectedDeviceId },
+            deviceId: selectedDeviceId ? { ideal: selectedDeviceId } : undefined,
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -769,7 +775,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       </div>
 
       {/* Full-screen snapshot popup modal - rendered via portal to escape overflow/transform contexts */}
-      {isSnapshotActive && compositedImage && snapshotEmotion && createPortal(
+      {isMounted && isSnapshotActive && compositedImage && snapshotEmotion && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-zoom-in">
           <div className="w-[92%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
             <img
