@@ -88,8 +88,18 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const personEmotionHistoryRef = useRef<Map<number, PersonEmotionEntry[]>>(new Map());
   const personLastEmotionRef = useRef<Map<number, string>>(new Map());
 
-  // Tracked face IDs for current detections (to show in UI)
-  const [currentFaceIds, setCurrentFaceIds] = useState<number[]>([]);
+  // Refs to hold latest props/callbacks without causing effect restarts
+  const modeRef = useRef(mode);
+  const eventNameRef = useRef(eventName);
+  const aiConfigRef = useRef(aiConfig);
+  const onCaptureRef = useRef(onCapture);
+  const onPersonCountRef = useRef(onPersonCount);
+
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { eventNameRef.current = eventName; }, [eventName]);
+  useEffect(() => { aiConfigRef.current = aiConfig; }, [aiConfig]);
+  useEffect(() => { onCaptureRef.current = onCapture; }, [onCapture]);
+  useEffect(() => { onPersonCountRef.current = onPersonCount; }, [onPersonCount]);
 
   const CAPTURE_INTERVAL = 5000;
   const AI_THROTTLE_INTERVAL = 5000;
@@ -540,7 +550,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     [eventName, aiConfig]
   );
 
-  // Face detection loop
+  // Face detection loop - uses refs to avoid dependency-driven restarts
   useEffect(() => {
     if (!isModelLoaded || !videoRef.current) return;
 
@@ -566,143 +576,254 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       const displaySize = { width: video.videoWidth, height: video.videoHeight };
       faceapi.matchDimensions(canvas, displaySize);
 
-      const detections = await faceapi
-        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-        .withFaceExpressions();
+      try {
+        const detections = await faceapi
+          .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
+          .withFaceExpressions();
 
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-      // Only draw on canvas when snapshot is not active
-      const ctx = !isSnapshotActiveRef.current ? canvas.getContext("2d") : null;
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+        const ctx = !isSnapshotActiveRef.current ? canvas.getContext("2d") : null;
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
 
-      if (resizedDetections.length > 0) {
-        const faces: DetectedFace[] = resizedDetections.map((detection) => {
-          const expressions = detection.expressions;
-          const maxExpression = Object.entries(expressions).reduce((a, b) =>
-            a[1] > b[1] ? a : b
-          );
+        if (resizedDetections.length > 0) {
+          const faces: DetectedFace[] = resizedDetections.map((detection) => {
+            const expressions = detection.expressions;
+            const maxExpression = Object.entries(expressions).reduce((a, b) =>
+              a[1] > b[1] ? a : b
+            );
 
-          // Apply minimum confidence threshold - if below 0.25, treat as neutral
-          const EXPRESSION_CONFIDENCE_THRESHOLD = 0.25;
-          const emotionKey: EmotionType = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
-            ? (maxExpression[0] as EmotionType)
-            : "neutral";
-          const emotionConfidence = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
-            ? maxExpression[1]
-            : 0;
+            const emotionKey: EmotionType = maxExpression[1] >= 0.25
+              ? (maxExpression[0] as EmotionType)
+              : "neutral";
 
-          const box = detection.detection.box;
+            const box = detection.detection.box;
 
-          // Draw box on canvas
-          if (ctx) {
-            ctx.strokeStyle = "#00ff88";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(box.x, box.y, box.width, box.height);
+            if (ctx) {
+              ctx.strokeStyle = "#00ff88";
+              ctx.lineWidth = 2;
+              ctx.strokeRect(box.x, box.y, box.width, box.height);
+              const label = `${emotionEmojis[emotionKey]} ${emotionLabels[emotionKey]} (${Math.round(maxExpression[1] * 100)}%)`;
+              ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+              ctx.fillRect(box.x, box.y - 28, ctx.measureText(label).width + 16, 28);
+              ctx.fillStyle = "#00ff88";
+              ctx.font = "14px sans-serif";
+              ctx.fillText(label, box.x + 8, box.y - 8);
+            }
 
-            const label = `${emotionEmojis[emotionKey]} ${emotionLabels[emotionKey]} (${Math.round(maxExpression[1] * 100)}%)`;
-            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            ctx.fillRect(box.x, box.y - 28, ctx.measureText(label).width + 16, 28);
-            ctx.fillStyle = "#00ff88";
-            ctx.font = "14px sans-serif";
-            ctx.fillText(label, box.x + 8, box.y - 8);
-          }
+            return {
+              emotion: emotionKey,
+              confidence: maxExpression[1],
+              position: { x: box.x, y: box.y, width: box.width, height: box.height },
+            };
+          });
 
-          return {
-            emotion: emotionKey,
-            confidence: emotionConfidence,
-            position: { x: box.x, y: box.y, width: box.width, height: box.height },
-          };
-        });
+          setDetectedFaces(faces);
 
-        setDetectedFaces(faces);
+          const emotions = faces.map((f) => f.emotion);
+          const dominant = getGroupDominantEmotion(emotions);
+          setDominantEmotion(dominant);
 
-        const emotions = faces.map((f) => f.emotion);
-        const dominant = getGroupDominantEmotion(emotions);
-        setDominantEmotion(dominant);
+          // Update face tracking
+          const now = Date.now();
+          lastFacesSeenTimeRef.current = now;
+          const currentTracked = trackedFacesRef.current;
+          const matchedIds: number[] = [];
+          const unmatched: number[] = [];
+          const usedIndices = new Set<number>();
 
-        // Update face tracking
-        const faceIds = updateTracking(faces);
-        setCurrentFaceIds(faceIds);
-
-        // Per-person emotion tracking (contador mode)
-        // NOTE: faceIds[idx] corresponds to faces[idx] because updateTracking()
-        // returns IDs in the same order as the input faces array. This coupling is
-        // intentional and deterministic - do not reorder faces before calling updateTracking().
-        if (mode === "contador" && faceIds.length > 0) {
-          faceIds.forEach((id, idx) => {
-            const currentEmotion = faces[idx]?.emotion;
-            if (!currentEmotion) return;
-
-            const lastEmotion = personLastEmotionRef.current.get(id);
-            if (lastEmotion !== currentEmotion) {
-              personLastEmotionRef.current.set(id, currentEmotion);
-              const history = personEmotionHistoryRef.current.get(id) || [];
-              history.push({
-                emotion: currentEmotion,
-                timestamp: new Date().toISOString(),
-              });
-              personEmotionHistoryRef.current.set(id, history);
-              console.log(`per${id}: ${lastEmotion || "inicio"} -> ${currentEmotion}`);
+          faces.forEach((face, idx) => {
+            const cx = face.position.x + face.position.width / 2;
+            const cy = face.position.y + face.position.height / 2;
+            const threshold = face.position.width * 0.5;
+            let best = -1, bestD = Infinity;
+            currentTracked.forEach((t, ti) => {
+              if (usedIndices.has(ti)) return;
+              const d = Math.sqrt((cx - t.centerX) ** 2 + (cy - t.centerY) ** 2);
+              if (d < threshold && d < bestD) { bestD = d; best = ti; }
+            });
+            if (best >= 0) {
+              usedIndices.add(best);
+              currentTracked[best].centerX = cx;
+              currentTracked[best].centerY = cy;
+              currentTracked[best].width = face.position.width;
+              currentTracked[best].height = face.position.height;
+              currentTracked[best].lastSeen = now;
+              matchedIds.push(currentTracked[best].id);
+            } else {
+              unmatched.push(idx);
             }
           });
-        }
 
-        // Mode-specific behavior
-        if (mode === "snapshot" && !isSnapshotActiveRef.current) {
-          // Trigger snapshot if conditions are met
-          triggerSnapshot(faces, dominant, faceIds);
-        }
-
-        // Generate message (for contador mode or when snapshot not active)
-        if (mode === "contador") {
-          if (aiConfig && aiConfig.baseUrl && aiConfig.apiKey && aiConfig.modelName) {
-            generateAIMessage(emotions, faces.length, dominant);
-          } else {
-            const isGroup = faces.length > 1;
-            const message = getRandomMessage(dominant, isGroup);
-            setCurrentMessage(message);
-            currentMessageRef.current = message;
-          }
-        }
-
-        // Auto-save to database at intervals
-        const now = Date.now();
-        if (now - lastCaptureTime.current >= CAPTURE_INTERVAL) {
-          lastCaptureTime.current = now;
-
-          // Build personEmotions data from history
-          const personEmotions: PersonEmotionData[] = [];
-          if (mode === "contador") {
-            personEmotionHistoryRef.current.forEach((emotions, personId) => {
-              personEmotions.push({
-                personId: `per${personId}`,
-                emotions,
-              });
+          unmatched.forEach((idx) => {
+            const face = faces[idx];
+            const newId = nextFaceIdRef.current++;
+            currentTracked.push({
+              id: newId,
+              centerX: face.position.x + face.position.width / 2,
+              centerY: face.position.y + face.position.height / 2,
+              width: face.position.width,
+              height: face.position.height,
+              lastSeen: now,
             });
-            // Flush history after building the payload to prevent unbounded growth.
-            // Only the changes since last save cycle are persisted each time.
-            personEmotionHistoryRef.current.clear();
+            uniquePersonCountRef.current++;
+            matchedIds.push(newId);
+          });
+
+          trackedFacesRef.current = currentTracked.filter(t => now - t.lastSeen < FACE_DISAPPEAR_RESET_MS);
+          onPersonCountRef.current?.(uniquePersonCountRef.current);
+
+          // Snapshot mode
+          if (modeRef.current === "snapshot" && !isSnapshotActiveRef.current) {
+            const stabilized = Date.now() - snapshotModeActivatedAtRef.current > SNAPSHOT_STABILIZATION_MS;
+            const allShown = matchedIds.every(id => snapshotShownForFacesRef.current.has(id));
+            
+            if (stabilized && !allShown && video.videoWidth > 0) {
+              // Capture snapshot
+              const tempCanvas = document.createElement("canvas");
+              tempCanvas.width = video.videoWidth;
+              tempCanvas.height = video.videoHeight;
+              const tCtx = tempCanvas.getContext("2d");
+              if (tCtx) {
+                tCtx.drawImage(video, 0, 0);
+                const image = tempCanvas.toDataURL("image/jpeg", 0.85);
+                const poem = getRandomPoem(dominant);
+
+                matchedIds.forEach(id => snapshotShownForFacesRef.current.add(id));
+                
+                setSnapshotImage(image);
+                setSnapshotPoem(poem);
+                setSnapshotEmotion(dominant);
+                setIsSnapshotActive(true);
+                isSnapshotActiveRef.current = true;
+
+                // Save to DB
+                fetch("/api/captures", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    eventName: eventNameRef.current,
+                    personCount: faces.length,
+                    emotions,
+                    dominantEmotion: dominant,
+                    message: poem,
+                    snapshotImage: image,
+                  }),
+                }).then(() => onCaptureRef.current?.({
+                  eventName: eventNameRef.current,
+                  personCount: faces.length,
+                  emotions,
+                  dominantEmotion: dominant,
+                  message: poem,
+                  snapshotImage: image,
+                })).catch(() => {});
+
+                // Composite image async
+                const cImg = new Image();
+                cImg.onload = () => {
+                  const c = document.createElement("canvas");
+                  c.width = cImg.width; c.height = cImg.height;
+                  const cCtx = c.getContext("2d");
+                  if (cCtx) {
+                    cCtx.drawImage(cImg, 0, 0);
+                    const gy = cImg.height * 0.55;
+                    const grad = cCtx.createLinearGradient(0, gy, 0, cImg.height);
+                    grad.addColorStop(0, "rgba(0,0,0,0)");
+                    grad.addColorStop(0.3, "rgba(0,0,0,0.7)");
+                    grad.addColorStop(1, "rgba(0,0,0,0.9)");
+                    cCtx.fillStyle = grad;
+                    cCtx.fillRect(0, gy, cImg.width, cImg.height - gy);
+                    const fs = Math.max(16, cImg.width * 0.03);
+                    cCtx.font = `italic ${fs}px Georgia, serif`;
+                    cCtx.fillStyle = "rgba(255,255,255,0.9)";
+                    cCtx.textAlign = "center";
+                    // Word wrap poem
+                    const words = poem.split(" ");
+                    const lines: string[] = [];
+                    let line = "";
+                    for (const w of words) {
+                      const test = line ? `${line} ${w}` : w;
+                      if (cCtx.measureText(test).width > cImg.width * 0.8 && line) {
+                        lines.push(line); line = w;
+                      } else line = test;
+                    }
+                    if (line) lines.push(line);
+                    const startY = gy + 40;
+                    lines.slice(0, 5).forEach((l, i) => {
+                      cCtx.fillText(l, cImg.width / 2, startY + i * fs * 1.4);
+                    });
+                    cCtx.font = `bold ${fs * 0.7}px sans-serif`;
+                    cCtx.fillStyle = "rgba(255,255,255,0.5)";
+                    cCtx.textAlign = "right";
+                    cCtx.fillText("EmotionAI", cImg.width - 10, cImg.height - 10);
+                    setCompositedImage(c.toDataURL("image/jpeg", 0.9));
+                  }
+                };
+                cImg.src = image;
+
+                // Auto dismiss
+                setTimeout(() => {
+                  setIsSnapshotActive(false);
+                  isSnapshotActiveRef.current = false;
+                  setSnapshotImage(null);
+                  setSnapshotPoem("");
+                  setSnapshotEmotion(null);
+                  setCompositedImage(null);
+                }, SNAPSHOT_DISPLAY_MS);
+              }
+            }
           }
 
-          const captureData: CaptureData = {
-            eventName,
-            personCount: faces.length,
-            emotions,
-            dominantEmotion: dominant,
-            message: currentMessageRef.current,
-            ...(personEmotions.length > 0 ? { personEmotions } : {}),
-          };
-          saveCapture(captureData);
+          // Per-person emotion tracking (contador mode)
+          if (modeRef.current === "contador" && matchedIds.length > 0) {
+            matchedIds.forEach((id, idx) => {
+              const em = faces[idx]?.emotion;
+              if (!em) return;
+              const last = personLastEmotionRef.current.get(id);
+              if (last !== em) {
+                personLastEmotionRef.current.set(id, em);
+                const hist = personEmotionHistoryRef.current.get(id) || [];
+                hist.push({ emotion: em, timestamp: new Date().toISOString() });
+                personEmotionHistoryRef.current.set(id, hist);
+              }
+            });
+          }
+
+          // Auto-save to database at intervals
+          if (now - lastCaptureTime.current >= CAPTURE_INTERVAL) {
+            lastCaptureTime.current = now;
+            const personEmotions: PersonEmotionData[] = [];
+            if (modeRef.current === "contador") {
+              personEmotionHistoryRef.current.forEach((ems, pid) => {
+                personEmotions.push({ personId: `per${pid}`, emotions: ems });
+              });
+              personEmotionHistoryRef.current.clear();
+            }
+            const captureData: CaptureData = {
+              eventName: eventNameRef.current,
+              personCount: faces.length,
+              emotions,
+              dominantEmotion: dominant,
+              message: currentMessageRef.current,
+              ...(personEmotions.length > 0 ? { personEmotions } : {}),
+            };
+            fetch("/api/captures", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(captureData),
+            }).then(() => onCaptureRef.current?.(captureData)).catch(() => {});
+          }
+        } else {
+          setDetectedFaces([]);
+          setDominantEmotion(null);
+          if (Date.now() - lastFacesSeenTimeRef.current > FACE_DISAPPEAR_RESET_MS) {
+            trackedFacesRef.current = [];
+          }
         }
-      } else {
-        setDetectedFaces([]);
-        setCurrentMessage("");
-        setDominantEmotion(null);
-        // Update tracking with empty faces (handles reset logic)
-        updateTracking([]);
+      } catch (err) {
+        console.error("Detection error:", err);
       }
 
       isDetecting = false;
@@ -710,11 +831,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     };
 
     animationId = requestAnimationFrame(detect);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [isModelLoaded, eventName, mode, saveCapture, aiConfig, generateAIMessage, updateTracking, triggerSnapshot]);
+    return () => cancelAnimationFrame(animationId);
+  }, [isModelLoaded]);
 
   if (error) {
     return (
@@ -734,9 +852,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
   return (
     <div className="space-y-2">
-      {/* Camera and resolution selectors */}
+      {/* Camera and resolution selectors - always show resolution */}
       <div className="w-full flex flex-wrap items-center gap-2">
-        {videoDevices.length > 1 && (
+        {videoDevices.length > 0 && (
           <select
             value={selectedDeviceId}
             onChange={(e) => setSelectedDeviceId(e.target.value)}
