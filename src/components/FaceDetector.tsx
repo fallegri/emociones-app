@@ -125,7 +125,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const MODEL_URL = "/models";
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
         setIsModelLoaded(true);
@@ -569,7 +568,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-        .withFaceLandmarks()
         .withFaceExpressions();
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
@@ -587,8 +585,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
             a[1] > b[1] ? a : b
           );
 
-          // Apply minimum confidence threshold - if below 0.4, treat as neutral
-          const EXPRESSION_CONFIDENCE_THRESHOLD = 0.4;
+          // Apply minimum confidence threshold - if below 0.25, treat as neutral
+          const EXPRESSION_CONFIDENCE_THRESHOLD = 0.25;
           const emotionKey: EmotionType = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
             ? (maxExpression[0] as EmotionType)
             : "neutral";
