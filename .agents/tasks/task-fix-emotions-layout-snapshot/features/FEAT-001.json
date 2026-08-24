@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix emotion detection always returning 'happy', fix camera layout proportions, implement canvas-based downloadable snapshot, and replace poems with Bolivian eastern region poetry",
+  "status": "in_progress",
+  "steps": [
+    "STEP 1 - Download face_landmark_68 model: Update scripts/download-models.sh to also download face_landmark_68_model-weights_manifest.json, face_landmark_68_model-shard1. Then run the script to download the model to public/models/.",
+    "STEP 2 - Fix emotion detection in src/components/FaceDetector.tsx: (a) Load faceapi.nets.faceLandmark68Net alongside the other models. (b) Add .withFaceLandmarks() in the detection pipeline between detectAllFaces and withFaceExpressions. (c) Add a minimum confidence threshold (0.4) - if the max expression confidence is below this threshold, default to 'neutral' instead of whatever has the tiny highest value. This prevents the model from always defaulting to 'happy' when confidence is low.",
+    "STEP 3 - Fix camera layout in src/components/FaceDetector.tsx: Change the video element from 'max-h-[400px] sm:max-h-[480px] lg:max-h-[560px] object-cover' to 'w-full object-contain' with no max-height restrictions. The video should display at its natural aspect ratio within the container. Ensure the canvas overlay still matches the video dimensions correctly.",
+    "STEP 4 - Implement downloadable snapshot with canvas compositing in src/components/FaceDetector.tsx: Replace the current snapshot overlay (which just shows an image and poem in separate sections) with a canvas-composited image that draws: (a) the captured camera frame as background, (b) a semi-transparent dark gradient overlay at the bottom third, (c) the emotion emoji centered above the text area, (d) the poem text overlaid on the gradient area with word wrapping, (e) 'EmotionAI' watermark in the corner. Generate this as a downloadable data URL. Show a preview of the composited image with a download button that stays visible for 10 seconds. Add the download button with an anchor tag using download attribute.",
+    "STEP 5 - Replace all poems in src/lib/poems.ts with poetry from Bolivia's eastern region (Oriente Boliviano): Use poems about camba culture, tropical nature from Santa Cruz/Beni/Pando, the llanos, the monte, rivers, carnival cruceno, regional identity. Include verses from or inspired by regional poets. Each emotion should have 4 culturally appropriate poems referencing the landscape, traditions, and spirit of eastern Bolivia."
+  ],
+  "acceptance_criteria": [
+    "face_landmark_68 model files exist in public/models/",
+    "FaceDetector loads faceLandmark68Net and uses .withFaceLandmarks() in detection pipeline",
+    "Expressions with max confidence below 0.4 are treated as 'neutral'",
+    "Video element uses object-contain without restrictive max-height values",
+    "Snapshot mode produces a canvas-composited image with photo + overlay + poem + emoji + watermark",
+    "A download button is present in snapshot mode allowing users to save the composited image",
+    "All poems in src/lib/poems.ts are replaced with Bolivian eastern region poetry",
+    "npm run build completes without errors"
+  ],
+  "verification": [
+    "Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+    "Verify face_landmark_68 model files exist in public/models/",
+    "Verify FaceDetector.tsx contains faceLandmark68Net loading and withFaceLandmarks() call",
+    "Verify video element has object-contain class and no restrictive max-h classes",
+    "Verify snapshot code creates a canvas with drawImage, gradient overlay, emoji, poem text, and watermark",
+    "Verify download button with download attribute exists in snapshot UI",
+    "Verify poems.ts contains Bolivian eastern region poetry references (camba, Santa Cruz, llanos, etc.)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

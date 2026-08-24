@@ -66,6 +66,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const [snapshotPoem, setSnapshotPoem] = useState<string>("");
   const [snapshotEmotion, setSnapshotEmotion] = useState<EmotionType | null>(null);
   const [isSnapshotActive, setIsSnapshotActive] = useState(false);
+  const [compositedImage, setCompositedImage] = useState<string | null>(null);
 
   const lastCaptureTime = useRef<number>(0);
   const lastAICallTime = useRef<number>(0);
@@ -115,6 +116,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const MODEL_URL = "/models";
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
         setIsModelLoaded(true);
@@ -283,6 +285,89 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     return tempCanvas.toDataURL("image/jpeg", 0.85);
   }, []);
 
+  // Composite snapshot with overlay, emoji, poem, and watermark
+  const compositeSnapshot = useCallback((imageDataUrl: string, emotion: EmotionType, poem: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        // Draw captured photo as background
+        ctx.drawImage(img, 0, 0);
+
+        // Semi-transparent dark gradient at bottom third
+        const gradientStartY = img.height * 0.6;
+        const gradient = ctx.createLinearGradient(0, gradientStartY, 0, img.height);
+        gradient.addColorStop(0, "rgba(0, 0, 0, 0)");
+        gradient.addColorStop(0.3, "rgba(0, 0, 0, 0.6)");
+        gradient.addColorStop(1, "rgba(0, 0, 0, 0.85)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, gradientStartY, img.width, img.height - gradientStartY);
+
+        // Emoji centered above text area
+        const emoji = emotionEmojis[emotion];
+        const emojiFontSize = Math.max(40, img.width * 0.08);
+        ctx.font = `${emojiFontSize}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(emoji, img.width / 2, gradientStartY + emojiFontSize + 10);
+
+        // Poem text with word-wrapping on the gradient area
+        const poemFontSize = Math.max(14, img.width * 0.028);
+        ctx.font = `italic ${poemFontSize}px Georgia, serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        ctx.textAlign = "center";
+
+        const maxTextWidth = img.width * 0.8;
+        const words = poem.split(" ");
+        const lines: string[] = [];
+        let currentLine = "";
+
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > maxTextWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        const lineHeight = poemFontSize * 1.5;
+        const textStartY = gradientStartY + emojiFontSize + 30 + poemFontSize;
+
+        lines.forEach((line, index) => {
+          ctx.fillText(line, img.width / 2, textStartY + index * lineHeight);
+        });
+
+        // Emotion label below poem
+        const labelY = textStartY + lines.length * lineHeight + poemFontSize;
+        ctx.font = `${poemFontSize * 0.8}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.fillText(emotionLabels[emotion], img.width / 2, labelY);
+
+        // "EmotionAI" watermark in bottom-right corner
+        const watermarkFontSize = Math.max(12, img.width * 0.02);
+        ctx.font = `bold ${watermarkFontSize}px sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.textAlign = "right";
+        ctx.fillText("EmotionAI", img.width - 15, img.height - 15);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.onerror = () => resolve(null);
+      img.src = imageDataUrl;
+    });
+  }, []);
+
   // Save capture to database
   const saveCapture = useCallback(
     async (captureData: CaptureData) => {
@@ -327,6 +412,13 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
     setSnapshotEmotion(dominant);
     setIsSnapshotActive(true);
 
+    // Composite the image with overlay
+    compositeSnapshot(image, dominant, poem).then((composited) => {
+      if (composited) {
+        setCompositedImage(composited);
+      }
+    });
+
     // Mark these faces as snapshot-shown
     faceIds.forEach((id) => snapshotShownForFacesRef.current.add(id));
 
@@ -348,8 +440,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       setSnapshotImage(null);
       setSnapshotPoem("");
       setSnapshotEmotion(null);
+      setCompositedImage(null);
     }, SNAPSHOT_DISPLAY_MS);
-  }, [captureVideoSnapshot, eventName, saveCapture]);
+  }, [captureVideoSnapshot, compositeSnapshot, eventName, saveCapture]);
 
   // Generate AI message
   const generateAIMessage = useCallback(
@@ -420,6 +513,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
       const detections = await faceapi
         .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
+        .withFaceLandmarks()
         .withFaceExpressions();
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
@@ -437,6 +531,15 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
             a[1] > b[1] ? a : b
           );
 
+          // Apply minimum confidence threshold - if below 0.4, treat as neutral
+          const EXPRESSION_CONFIDENCE_THRESHOLD = 0.4;
+          const emotionKey: EmotionType = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
+            ? (maxExpression[0] as EmotionType)
+            : "neutral";
+          const emotionConfidence = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
+            ? maxExpression[1]
+            : maxExpression[1];
+
           const box = detection.detection.box;
 
           // Draw box on canvas
@@ -445,7 +548,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
             ctx.lineWidth = 2;
             ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-            const emotionKey = maxExpression[0] as EmotionType;
             const label = `${emotionEmojis[emotionKey]} ${emotionLabels[emotionKey]} (${Math.round(maxExpression[1] * 100)}%)`;
             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
             ctx.fillRect(box.x, box.y - 28, ctx.measureText(label).width + 16, 28);
@@ -455,8 +557,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           }
 
           return {
-            emotion: maxExpression[0] as EmotionType,
-            confidence: maxExpression[1],
+            emotion: emotionKey,
+            confidence: emotionConfidence,
             position: { x: box.x, y: box.y, width: box.width, height: box.height },
           };
         });
@@ -613,7 +715,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           autoPlay
           muted
           playsInline
-          className="w-full max-h-[400px] sm:max-h-[480px] lg:max-h-[560px] object-cover"
+          className="w-full object-contain"
           onLoadedMetadata={() => {
             if (canvasRef.current && videoRef.current) {
               canvasRef.current.width = videoRef.current.videoWidth;
@@ -626,30 +728,26 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
           className="absolute top-0 left-0 w-full h-full pointer-events-none"
         />
 
-        {/* Snapshot overlay */}
-        {isSnapshotActive && snapshotImage && snapshotEmotion && (
+        {/* Snapshot overlay - canvas composited image with download */}
+        {isSnapshotActive && compositedImage && snapshotEmotion && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 animate-zoom-in">
-            <div className="w-[90%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20">
+            <div className="w-[90%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
               <img
-                src={snapshotImage}
-                alt="Snapshot capturado"
-                className="w-full object-cover max-h-[300px]"
+                src={compositedImage}
+                alt="Snapshot con poema"
+                className="w-full object-contain rounded-t-xl"
               />
-              <div
-                className="p-4 sm:p-6 text-center"
-                style={{
-                  background: `linear-gradient(135deg, ${getEmotionBg(snapshotEmotion)})`,
-                }}
-              >
-                <p className="text-2xl sm:text-3xl mb-2">
-                  {emotionEmojis[snapshotEmotion]}
-                </p>
-                <p className="text-white/90 text-sm sm:text-base italic leading-relaxed">
-                  &ldquo;{snapshotPoem}&rdquo;
-                </p>
-                <p className="text-white/60 text-xs mt-3">
-                  {emotionLabels[snapshotEmotion]}
-                </p>
+              <div className="w-full p-3 sm:p-4 bg-gray-900/95 flex justify-center">
+                <a
+                  href={compositedImage}
+                  download={`emotionai-${snapshotEmotion}-${Date.now()}.jpg`}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-all duration-200 text-sm sm:text-base flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Descargar imagen
+                </a>
               </div>
             </div>
           </div>
@@ -694,19 +792,6 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       </div>
     </div>
   );
-}
-
-function getEmotionBg(emotion: EmotionType): string {
-  const gradients: Record<EmotionType, string> = {
-    happy: "#fbbf24, #f59e0b",
-    sad: "#60a5fa, #818cf8",
-    angry: "#f87171, #ef4444",
-    surprised: "#fb923c, #f97316",
-    disgusted: "#4ade80, #22c55e",
-    fearful: "#c084fc, #a855f7",
-    neutral: "#9ca3af, #6b7280",
-  };
-  return gradients[emotion];
 }
 
 function getEmotionAccentColor(emotion: EmotionType): string {

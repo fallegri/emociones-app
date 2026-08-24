@@ -16,6 +16,10 @@ echo "Downloading Tiny Face Detector (fallback - faster, less accurate)..."
 curl -sL "$BASE_URL/tiny_face_detector_model-weights_manifest.json" -o "$MODEL_DIR/tiny_face_detector_model-weights_manifest.json"
 curl -sL "$BASE_URL/tiny_face_detector_model-shard1" -o "$MODEL_DIR/tiny_face_detector_model-shard1"
 
+echo "Downloading Face Landmark 68 model..."
+curl -sL "$BASE_URL/face_landmark_68_model-weights_manifest.json" -o "$MODEL_DIR/face_landmark_68_model-weights_manifest.json"
+curl -sL "$BASE_URL/face_landmark_68_model-shard1" -o "$MODEL_DIR/face_landmark_68_model-shard1"
+
 echo "Downloading face expression model..."
 curl -sL "$BASE_URL/face_expression_model-weights_manifest.json" -o "$MODEL_DIR/face_expression_model-weights_manifest.json"
 curl -sL "$BASE_URL/face_expression_model-shard1" -o "$MODEL_DIR/face_expression_model-shard1"

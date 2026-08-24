@@ -1,0 +1,7 @@
+{
+  "task_id": "task-fix-emotions-layout-snapshot",
+  "task_description": "Fix emotion detection always returning happy, fix camera layout proportions, implement downloadable canvas-composited snapshot with poem overlay, and replace poems with Bolivian eastern region poetry",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

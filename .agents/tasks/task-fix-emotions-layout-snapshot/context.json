@@ -1,0 +1,24 @@
+{
+  "project_type": "Next.js 16 App Router with face-api.js emotion detection",
+  "language": "TypeScript",
+  "build_system": "npm with Next.js 16.3.0 (Turbopack)",
+  "test_framework": "No test framework configured",
+  "build_command": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+  "test_command": "No test command (build-only verification)",
+  "verification_instructions": "Run npm run build and confirm it completes without errors",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Node.js v22 via nvm is pre-installed. Run: export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm install",
+  "environment_constraints": "OPEN_INTERNET network. Must prefix all npm/node commands with nvm sourcing. Next.js 16 with AGENTS.md rule requiring checking node_modules/next/dist/docs/ for any API changes.",
+  "contribution_requirements": "AGENTS.md mandates reading Next.js docs at node_modules/next/dist/docs/ before writing code. The project uses Tailwind CSS 4 with @tailwind directives in globals.css.",
+  "key_patterns": "Client components use 'use client' directive. face-api.js models served from /public/models/. FaceDetector.tsx is the main detection component. Emotion types defined in src/lib/emotions.ts. Poems in src/lib/poems.ts with getRandomPoem(emotion) function.",
+  "relevant_files": [
+    "src/components/FaceDetector.tsx",
+    "src/lib/poems.ts",
+    "src/lib/emotions.ts",
+    "src/app/page.tsx",
+    "src/app/globals.css",
+    "public/models/",
+    "scripts/download-models.sh"
+  ],
+  "directory_structure": "src/app/ - Next.js App Router pages and API routes. src/components/ - React components (FaceDetector.tsx main). src/lib/ - Utility modules (emotions.ts, poems.ts, ai-config.ts). public/models/ - face-api.js model weights. scripts/ - build/setup scripts."
+}
