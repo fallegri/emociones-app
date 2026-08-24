@@ -114,7 +114,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       try {
         const MODEL_URL = "/models";
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
         ]);
         setIsModelLoaded(true);
@@ -164,8 +164,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const constraints: MediaStreamConstraints = {
           video: {
             deviceId: { exact: selectedDeviceId },
-            width: 720,
-            height: 560,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
           },
         };
 
@@ -419,7 +419,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
       faceapi.matchDimensions(canvas, displaySize);
 
       const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+        .detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
         .withFaceExpressions();
 
       const resizedDetections = faceapi.resizeResults(detections, displaySize);

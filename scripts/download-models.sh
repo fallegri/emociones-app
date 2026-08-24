@@ -7,7 +7,12 @@ BASE_URL="https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master
 
 mkdir -p $MODEL_DIR
 
-echo "Downloading face detection model (tiny_face_detector)..."
+echo "Downloading SSD MobileNet v1 model (primary - better for groups)..."
+curl -sL "$BASE_URL/ssd_mobilenetv1_model-weights_manifest.json" -o "$MODEL_DIR/ssd_mobilenetv1_model-weights_manifest.json"
+curl -sL "$BASE_URL/ssd_mobilenetv1_model-shard1" -o "$MODEL_DIR/ssd_mobilenetv1_model-shard1"
+curl -sL "$BASE_URL/ssd_mobilenetv1_model-shard2" -o "$MODEL_DIR/ssd_mobilenetv1_model-shard2"
+
+echo "Downloading Tiny Face Detector (fallback - faster, less accurate)..."
 curl -sL "$BASE_URL/tiny_face_detector_model-weights_manifest.json" -o "$MODEL_DIR/tiny_face_detector_model-weights_manifest.json"
 curl -sL "$BASE_URL/tiny_face_detector_model-shard1" -o "$MODEL_DIR/tiny_face_detector_model-shard1"
 
