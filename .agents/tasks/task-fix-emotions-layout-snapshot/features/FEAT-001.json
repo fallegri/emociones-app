@@ -30,5 +30,5 @@
     "Verify poems.ts contains Bolivian eastern region poetry references (camba, Santa Cruz, llanos, etc.)"
   ],
   "blocked_reason": null,
-  "findings": "All 5 steps completed successfully. Build passes with Next.js 16.3.0 Turbopack. The getEmotionAccentColor helper function remains in FaceDetector.tsx (unused but harmless - TypeScript does not flag it). The compositeSnapshot function uses a Promise-based Image loading pattern for canvas compositing on the client side."
+  "findings": "All 5 steps completed successfully. Build passes with Next.js 16.3.0 Turbopack. Post-review fixes: (1) emotionConfidence else branch now assigns 0 instead of the raw expression value, (2) unused getEmotionAccentColor function removed, (3) compositeSnapshot uses dynamic font reduction (down to 10px min) and line-count truncation with ellipsis to prevent poem text from overflowing on low-resolution captures."
 }

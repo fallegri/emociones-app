@@ -1,7 +1,14 @@
 {
   "task_id": "task-fix-emotions-layout-snapshot",
   "task_description": "Fix emotion detection always returning happy, fix camera layout proportions, implement downloadable canvas-composited snapshot with poem overlay, and replace poems with Bolivian eastern region poetry",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "skipped",
+    "docker_build": "skipped",
+    "summary": "npm run build completes successfully. All acceptance criteria verified. Post-review fixes applied: (1) emotionConfidence now correctly returns 0 when falling back to neutral, (2) dead getEmotionAccentColor function removed, (3) compositeSnapshot now dynamically reduces poem font size and caps line count to prevent overflow on small canvases."
+  }
 }
