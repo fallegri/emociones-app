@@ -61,6 +61,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   const [error, setError] = useState<string | null>(null);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [selectedResolution, setSelectedResolution] = useState<string>("720");
 
   // Snapshot mode state
   const [snapshotImage, setSnapshotImage] = useState<string | null>(null);
@@ -163,6 +164,14 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   useEffect(() => {
     if (!isModelLoaded || !selectedDeviceId) return;
 
+    const resolutions: Record<string, { width: number; height: number }> = {
+      "480": { width: 640, height: 480 },
+      "720": { width: 1280, height: 720 },
+      "1080": { width: 1920, height: 1080 },
+    };
+
+    const res = resolutions[selectedResolution] || resolutions["720"];
+
     const startCamera = async () => {
       try {
         if (videoRef.current?.srcObject) {
@@ -173,8 +182,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         const constraints: MediaStreamConstraints = {
           video: {
             deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-            width: { ideal: 1280, min: 640 },
-            height: { ideal: 720, min: 480 },
+            width: { ideal: res.width, min: 320 },
+            height: { ideal: res.height, min: 240 },
           },
         };
 
@@ -195,7 +204,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         tracks.forEach((track) => track.stop());
       }
     };
-  }, [isModelLoaded, selectedDeviceId]);
+  }, [isModelLoaded, selectedDeviceId, selectedResolution]);
 
   // Face tracking: match detected faces to tracked faces
   const updateTracking = useCallback((faces: DetectedFace[]): number[] => {
@@ -710,13 +719,13 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
 
   return (
     <div className="space-y-2">
-      {/* Camera selector */}
-      {videoDevices.length > 1 && (
-        <div className="w-full">
+      {/* Camera and resolution selectors */}
+      <div className="w-full flex flex-wrap items-center gap-2">
+        {videoDevices.length > 1 && (
           <select
             value={selectedDeviceId}
             onChange={(e) => setSelectedDeviceId(e.target.value)}
-            className="w-full sm:w-auto px-3 py-1.5 bg-gray-800/80 border border-gray-700/50 rounded-lg text-xs text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
+            className="flex-1 sm:flex-none px-3 py-1.5 bg-gray-800/80 border border-gray-700/50 rounded-lg text-xs text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
           >
             {videoDevices.map((device, index) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -724,8 +733,17 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
               </option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+        <select
+          value={selectedResolution}
+          onChange={(e) => setSelectedResolution(e.target.value)}
+          className="px-3 py-1.5 bg-gray-800/80 border border-gray-700/50 rounded-lg text-xs text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all duration-200"
+        >
+          <option value="480">480p (640×480)</option>
+          <option value="720">720p HD (1280×720)</option>
+          <option value="1080">1080p Full HD (1920×1080)</option>
+        </select>
+      </div>
 
       {/* Video container */}
       <div className="relative rounded-xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700/30 w-full max-h-[60vh]">
