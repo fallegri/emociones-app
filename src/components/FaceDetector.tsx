@@ -319,29 +319,58 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         ctx.fillText(emoji, img.width / 2, gradientStartY + emojiFontSize + 10);
 
         // Poem text with word-wrapping on the gradient area
-        const poemFontSize = Math.max(14, img.width * 0.028);
+        // Dynamically reduce font size if text would overflow the available space
+        const availableHeight = img.height - (gradientStartY + emojiFontSize + 30);
+        // Reserve space for the emotion label below the poem
+        const reservedForLabel = Math.max(14, img.width * 0.028) * 2;
+        const maxPoemHeight = availableHeight - reservedForLabel;
+
+        let poemFontSize = Math.max(14, img.width * 0.028);
+        const minPoemFontSize = 10;
+        let lines: string[] = [];
+        let lineHeight = poemFontSize * 1.5;
+
+        // Try progressively smaller font sizes until the poem fits
+        while (poemFontSize >= minPoemFontSize) {
+          ctx.font = `italic ${poemFontSize}px Georgia, serif`;
+          lineHeight = poemFontSize * 1.5;
+
+          const maxTextWidth = img.width * 0.8;
+          const words = poem.split(" ");
+          lines = [];
+          let currentLine = "";
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxTextWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) lines.push(currentLine);
+
+          const totalTextHeight = lines.length * lineHeight;
+          if (totalTextHeight <= maxPoemHeight) break;
+
+          // Reduce font and retry
+          poemFontSize -= 2;
+        }
+
+        // Final cap: if still overflowing after hitting min font size, truncate lines
+        const maxLines = Math.max(2, Math.floor(maxPoemHeight / lineHeight));
+        if (lines.length > maxLines) {
+          lines = lines.slice(0, maxLines);
+          // Add ellipsis to last line
+          lines[lines.length - 1] = lines[lines.length - 1] + "...";
+        }
+
         ctx.font = `italic ${poemFontSize}px Georgia, serif`;
         ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
         ctx.textAlign = "center";
 
-        const maxTextWidth = img.width * 0.8;
-        const words = poem.split(" ");
-        const lines: string[] = [];
-        let currentLine = "";
-
-        for (const word of words) {
-          const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > maxTextWidth && currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-        }
-        if (currentLine) lines.push(currentLine);
-
-        const lineHeight = poemFontSize * 1.5;
         const textStartY = gradientStartY + emojiFontSize + 30 + poemFontSize;
 
         lines.forEach((line, index) => {
@@ -538,7 +567,7 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
             : "neutral";
           const emotionConfidence = maxExpression[1] >= EXPRESSION_CONFIDENCE_THRESHOLD
             ? maxExpression[1]
-            : maxExpression[1];
+            : 0;
 
           const box = detection.detection.box;
 
@@ -794,15 +823,3 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
   );
 }
 
-function getEmotionAccentColor(emotion: EmotionType): string {
-  const colors: Record<EmotionType, string> = {
-    happy: "#fbbf24",
-    sad: "#60a5fa",
-    angry: "#f87171",
-    surprised: "#fb923c",
-    disgusted: "#4ade80",
-    fearful: "#c084fc",
-    neutral: "#9ca3af",
-  };
-  return colors[emotion];
-}
