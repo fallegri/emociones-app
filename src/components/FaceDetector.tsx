@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import * as faceapi from "face-api.js";
 import { EmotionType, emotionLabels, emotionEmojis, getRandomMessage, getGroupDominantEmotion } from "@/lib/emotions";
 import { getRandomPoem } from "@/lib/poems";
@@ -767,9 +768,9 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
         )}
       </div>
 
-      {/* Full-screen snapshot popup modal */}
-      {isSnapshotActive && compositedImage && snapshotEmotion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm animate-zoom-in">
+      {/* Full-screen snapshot popup modal - rendered via portal to escape overflow/transform contexts */}
+      {isSnapshotActive && compositedImage && snapshotEmotion && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-zoom-in">
           <div className="w-[92%] max-w-lg rounded-xl overflow-hidden shadow-2xl border border-white/20 flex flex-col items-center">
             <img
               src={compositedImage}
@@ -801,7 +802,8 @@ export default function FaceDetector({ eventName, aiConfig, mode, onCapture, onP
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
