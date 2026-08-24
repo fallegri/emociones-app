@@ -1,0 +1,13 @@
+{
+  "project_type": "Next.js 16 App Router with face-api.js emotion detection",
+  "language": "TypeScript",
+  "build_system": "npm with Next.js 16.3.0 (Turbopack)",
+  "test_framework": "No test framework configured",
+  "build_command": "export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && cd /projects/sandbox/emociones-app && npm run build",
+  "test_command": "No test command (build-only verification)",
+  "verification_instructions": "Run npm run build and confirm it completes without errors",
+  "relevant_files": [
+    "src/components/FaceDetector.tsx",
+    "src/app/page.tsx"
+  ]
+}

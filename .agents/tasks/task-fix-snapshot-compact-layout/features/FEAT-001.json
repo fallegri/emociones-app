@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix snapshot never firing and make detection layout compact single-screen",
+  "status": "completed",
+  "steps": [
+    "STEP 1 - Remove confidence checks from triggerSnapshot in FaceDetector.tsx so it fires whenever faces are detected and have not been snapshotted yet",
+    "STEP 2 - Move snapshot display from inline video overlay to full-screen popup modal (position fixed, z-50) with composited image and download/close buttons",
+    "STEP 3 - Restructure detection view (Step 3) in page.tsx to compact single-screen: top bar with mode badge + person count + event name + stop button in one row, camera taking remaining vertical space with max-h-[60vh], compact mode toggle at bottom",
+    "STEP 4 - Remove the LED indicator div below the video in FaceDetector.tsx",
+    "STEP 5 - Remove the oversized stats card and separate mode indicator banner from page.tsx"
+  ],
+  "acceptance_criteria": [
+    "Snapshot triggers reliably when faces are detected (no confidence gating)",
+    "Snapshot displays as full-screen popup modal with download button",
+    "Detection view fits on one screen without scrolling",
+    "Top bar shows mode, person count, event name, and stop button in one row",
+    "Camera video has max-h-[60vh] and object-contain",
+    "Mode toggle is compact at bottom",
+    "No LED indicator below video",
+    "npm run build passes"
+  ],
+  "verification": [
+    "Run npm run build - passes"
+  ],
+  "blocked_reason": null,
+  "findings": "Build passes cleanly with Next.js 16.3.0 Turbopack. Net reduction of 67 lines (160 removed, 93 added). The snapshot trigger no longer depends on emotionConfidence which was being set to 0 for sub-threshold expressions."
+}
